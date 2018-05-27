@@ -1,0 +1,29 @@
+{
+  "name": "sync-video",
+  "version": "0.1.0",
+  "description": "A node app to synchronise videos across users",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.16.3",
+    "socket.io": "^2.1.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Delivator/sync-video.git"
+  },
+  "keywords": [
+    "sync",
+    "video"
+  ],
+  "author": "Delivator",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Delivator/sync-video/issues"
+  },
+  "homepage": "https://github.com/Delivator/sync-video#readme"
+}
