@@ -1,18 +1,14 @@
 <template>
-  <v-app>
+  <v-app dark>
     <v-toolbar app>
       <v-toolbar-title class="headline text-uppercase">
-        <span>Vuetify</span>
-        <span class="font-weight-light">MATERIAL DESIGN</span>
+        <span>SYNC-VIDEO</span>
+        <span class="font-weight-light">.ME</span>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn
-        flat
-        href="https://github.com/vuetifyjs/vuetify/releases/latest"
-        target="_blank"
-      >
-        <span class="mr-2">Latest Release</span>
-        <v-icon>open_in_new</v-icon>
+      <v-btn raised href="/login" >
+        <span class="mr-2">Login</span>
+        <v-icon>input</v-icon>
       </v-btn>
     </v-toolbar>
 
