@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <link href="https://fonts.googleapis.com/css?family=Montserrat|Rubik" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css">
   <link rel="stylesheet" href="/css/style.css">
   <title>Sync-Video</title>
@@ -15,7 +16,12 @@
   <header class="mdc-toolbar">
     <div class="mdc-toolbar__row">
       <section class="mdc-toolbar__section mdc-toolbar__section--align-start">
-        <span class="mdc-toolbar__title">Sync-Video</span>
+        <span class="mdc-toolbar__title"><a href="/">Sync-Video</a></span>
+      </section>
+      <section class="mdc-toolbar__section mdc-toolbar__section--align-end">
+        <div id="avatar" class="hide mdc-menu-surface--anchor">
+          <a href="http://gravatar.com/emails/" target="_blank" title="Edit on gravatar.com"><img alt="Avatar"></a>
+        </div>
       </section>
     </div>
   </header>
@@ -26,9 +32,6 @@
         <div class="mdc-layout-grid__cell mdc-layout-grid__cell--span-4">
           <form id="loginForm">
             <h2>Login or sign up</h2>
-            <div id="avatar" class="hide">
-              <a href="http://gravatar.com/emails/" target="_blank" title="Edit on gravatar.com"><img src="" alt="Avatar"></a>
-            </div>
             <div id="loginInputs" class="hide">
               <div class="mdc-text-field mdc-text-field--outlined" data-mdc-auto-init="MDCTextField">
                 <input type="email" required id="email" class="mdc-text-field__input">
@@ -41,7 +44,7 @@
                 </div>
               </div><br>
               <div class="mdc-text-field mdc-text-field--outlined" data-mdc-auto-init="MDCTextField">
-                <input type="password" required id="password" class="mdc-text-field__input">
+                <input type="password" required minlength=6 id="password" class="mdc-text-field__input">
                 <div class="mdc-notched-outline">
                   <div class="mdc-notched-outline__leading"></div>
                   <div class="mdc-notched-outline__notch">
@@ -55,6 +58,7 @@
               <span class="mdc-button__label">Login</span>
             </button>
             <button data-mdc-auto-init="MDCRipple" class="mdc-button hide" id="btnLogout">
+              <i class="material-icons">exit_to_app</i>
               <span class="mdc-button__label">Log Out</span>
             </button>
             <button data-mdc-auto-init="MDCRipple" class="mdc-button hide" id="btnSignUp">
