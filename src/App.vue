@@ -2,11 +2,13 @@
   <v-app dark>
     <v-toolbar app>
       <v-toolbar-title class="headline text-uppercase">
-        <span>SYNC-VIDEO</span>
-        <span class="font-weight-light">.ME</span>
+        <router-link to="/" class="white--text">
+          <span>SYNC-VIDEO</span>
+          <span class="font-weight-light">.ME</span>
+        </router-link>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn raised href="/login" >
+      <v-btn raised to="/login" >
         <span class="mr-2">Login</span>
         <v-icon>input</v-icon>
       </v-btn>
@@ -18,8 +20,11 @@
   </v-app>
 </template>
 
-<script>
+<style>
+  @import "assets/css/style.css";
+</style>
 
+<script>
 export default {
   name: 'App',
   data () {
