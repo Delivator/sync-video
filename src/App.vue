@@ -1,8 +1,8 @@
 <template>
-  <v-app dark>
+  <v-app :dark="darkMode">
     <v-toolbar app>
       <v-toolbar-title class="headline text-uppercase">
-        <router-link to="/" class="white--text">
+        <router-link to="/" :class="darkMode ? 'white--text' : 'black--text'">
           <span>SYNC-VIDEO</span>
           <span class="font-weight-light">.ME</span>
         </router-link>
@@ -25,6 +25,9 @@
       <v-btn v-else raised to="/login">
         <span class="mr-2">Login</span>
         <v-icon>input</v-icon>
+      </v-btn>
+      <v-btn fab small @click="darkMode = !darkMode">
+        <v-icon>invert_colors</v-icon>
       </v-btn>
     </v-toolbar>
 
@@ -57,8 +60,8 @@ export default {
         text: "",
         send: (type, message, timeout) => {
           if (!timeout || isNaN(timeout) || timeout < 1) timeout = 7500;
-          if (!timeout || !/success|info|warning|error/.test(type))
-            type = "info";
+          if (!message || message === "") message = "Unknown error"
+          if (!type || !/success|info|warning|error/.test(type)) type = "info";
           this.alertBox.show = true;
           this.alertBox.type = type;
           this.alertBox.text = message;
@@ -68,7 +71,8 @@ export default {
         }
       },
       currentUser: this.$root.$children[0].currentUser || null,
-      gravatarUrl: null
+      gravatarUrl: null,
+      darkMode: true
     };
   },
   methods: {
@@ -80,7 +84,7 @@ export default {
           this.alertBox.send("info", "Successfully logged out!", 3000)
         })
         .catch(e => {
-          this.alertBox.send("error", e.message || "Unknown error", 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     },
     getGravatarUrl: function(email, size) {
@@ -98,6 +102,48 @@ export default {
       this.currentUser = user;
       this.$root.$emit("onAuthStateChanged", user);
     });
+    const mode = this.$route.query.mode;
+    const actionCode = this.$route.query.oobCode;
+    if (mode && actionCode) {
+      const auth = firebase.auth();
+      switch (mode) {
+        case "resetPassword":
+          auth.verifyPasswordResetCode(actionCode)
+            .then(email => {
+              this.$router.push({
+                path: "/reset-password",
+                query: {
+                  email,
+                  actionCode
+                }
+              });
+            })
+            .catch(e => {
+              this.$router.replace("/");
+              this.alertBox.send("error", e.message, 10000);
+            });
+          break;
+        case "recoverEmail":
+          auth.checkActionCode(actionCode)
+            .then(() => {
+              auth.applyActionCode(actionCode)
+                .then(() => this.alertBox.send("success", "Email address successfully changed.", 3000));
+            })
+            .catch(e => this.alertBox.send("error", e.message, 10000));
+          this.$router.replace("/");
+          break;
+        case "verifyEmail":
+          auth.applyActionCode(actionCode)
+            .then(() => this.alertBox.send("success", "Email address successfully verified.", 3000))
+            .catch(e => this.alertBox.send("error", e.message, 10000));
+          this.$router.replace("/");
+          break;
+        default:
+          this.$router.replace("/");
+          this.alertBox.send("error", "Invalid mode", 10000);
+          break;
+      }
+    }
   }
 };
 </script>

@@ -71,7 +71,7 @@ export default {
           this.$root.$emit("onAuthStateChanged", user.user);
         })
         .catch(e => {
-          alertBox.send("error", e.message || "Unknown error", 10000);
+          alertBox.send("error", e.message, 10000);
         });
     }
   }

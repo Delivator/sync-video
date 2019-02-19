@@ -14,24 +14,26 @@
                 label="Email"
                 type="email"
                 v-model="email"
+                ref="email"
               ></v-text-field>
               <v-text-field
+                :rules="[rules.required, rules.min]"
                 prepend-icon="lock"
                 :append-icon="showPassword ? 'visibility_off' : 'visibility'"
-                :rules="[rules.required, rules.min]"
                 :type="showPassword ? 'text' : 'password'"
                 label="Password"
                 hint="At least 6 characters"
                 counter
                 @click:append="showPassword = !showPassword"
                 v-model="password"
+                ref="password"
               ></v-text-field>
             </v-form>
           </v-card-text>
           <v-card-actions>
             <v-btn color="primary" to="/sign-up">Sign Up</v-btn>
             <v-spacer></v-spacer>
-            <v-btn color="error">Reset Password</v-btn>
+            <v-btn @click="resetPassword" color="error">Reset Password</v-btn>
             <v-btn @click="login" color="success">Login</v-btn>
           </v-card-actions>
         </v-card>
@@ -60,6 +62,10 @@ export default {
   methods: {
     login: function() {
       const alertBox = this.$root.$children[0].alertBox;
+      if (!this.$refs["email"].valid) {
+        this.$refs["email"].validate(true);
+        return;
+      }
       firebase
         .auth()
         .signInWithEmailAndPassword(this.email, this.password)
@@ -68,7 +74,21 @@ export default {
           this.$router.replace("/");
         })
         .catch(e => alertBox.send("error", e.message, 10000));
-      this.$router.replace("/");
+    },
+    resetPassword: function() {
+      const alertBox = this.$root.$children[0].alertBox;
+      if (!this.$refs["email"].valid) {
+        this.$refs["email"].validate(true);
+        return;
+      }
+      firebase
+        .auth()
+        .sendPasswordResetEmail(this.email)
+        .then(() => {
+          this.$router.push("/");
+          alertBox.send("success", "Password reset mail send.");
+        })
+        .catch(e => alertBox.send("error", e.message, 10000));
     }
   }
 };
