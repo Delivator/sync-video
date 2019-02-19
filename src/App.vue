@@ -8,34 +8,42 @@
         </router-link>
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-hover>
-        <v-img
-          v-if="currentUser && currentUser.email"
-          :src="getGravatarUrl(currentUser.email)"
-          max-width="3em"
-          @click="openGravatar"
-          slot-scope="{ hover }"
-          :class="`avatar elevation-${hover ? 5 : 2}`"
-        ></v-img>
-      </v-hover>
-      <v-btn v-if="currentUser" raised @click="signOut">
-        <span class="mr-2">Log out</span>
-        <v-icon>exit_to_app</v-icon>
+      <v-btn v-if="!currentUser" raised to="/login">
+        <span>Login</span>
       </v-btn>
-      <v-btn v-else raised to="/login">
-        <span class="mr-2">Login</span>
-        <v-icon>input</v-icon>
-      </v-btn>
-      <v-btn fab small @click="darkMode = !darkMode">
-        <v-icon>invert_colors</v-icon>
-      </v-btn>
+      <v-menu offset-y>
+        <v-avatar v-if="currentUser && currentUser.email" slot="activator">
+          <img :src="getGravatarUrl(currentUser.email)" alt="avatar">
+        </v-avatar>
+        <v-btn v-else fab small slot="activator">
+          <v-icon>settings</v-icon>
+        </v-btn>
+        <v-list>
+          <v-list-tile @click="signOut" v-if="currentUser">
+            <v-list-tile-action>
+              <v-icon>exit_to_app</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-list-tile-title>Log out</v-list-tile-title>
+            </v-list-tile-content>
+          </v-list-tile>
+          <v-list-tile @click="toggleDarkMode">
+            <v-list-tile-action>
+              <v-icon>invert_colors</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-list-tile-title>Toggle dark mode</v-list-tile-title>
+            </v-list-tile-content>
+          </v-list-tile>
+        </v-list>
+      </v-menu>
     </v-toolbar>
-
     <v-content>
       <v-alert
         v-model="alertBox.show"
         :type="alertBox.type || 'info'"
         dismissible
+        transition="slide-y-transition"
       >{{ alertBox.text }}</v-alert>
       <router-view/>
     </v-content>
@@ -60,7 +68,7 @@ export default {
         text: "",
         send: (type, message, timeout) => {
           if (!timeout || isNaN(timeout) || timeout < 1) timeout = 7500;
-          if (!message || message === "") message = "Unknown error"
+          if (!message || message === "") message = "Unknown error";
           if (!type || !/success|info|warning|error/.test(type)) type = "info";
           this.alertBox.show = true;
           this.alertBox.type = type;
@@ -72,7 +80,7 @@ export default {
       },
       currentUser: this.$root.$children[0].currentUser || null,
       gravatarUrl: null,
-      darkMode: true
+      darkMode: localStorage.getItem("darkMode") ? true : false
     };
   },
   methods: {
@@ -81,7 +89,7 @@ export default {
         .auth()
         .signOut()
         .then(() => {
-          this.alertBox.send("info", "Successfully logged out!", 3000)
+          this.alertBox.send("info", "Successfully logged out!", 3000);
         })
         .catch(e => {
           this.alertBox.send("error", e.message, 10000);
@@ -95,6 +103,12 @@ export default {
     },
     openGravatar: function() {
       window.open("http://gravatar.com/emails/", "_blank");
+    },
+    toggleDarkMode() {
+      this.darkMode = !this.darkMode;
+      this.darkMode
+        ? localStorage.setItem("darkMode", this.darkMode)
+        : localStorage.removeItem("darkMode");
     }
   },
   mounted() {
@@ -108,7 +122,8 @@ export default {
       const auth = firebase.auth();
       switch (mode) {
         case "resetPassword":
-          auth.verifyPasswordResetCode(actionCode)
+          auth
+            .verifyPasswordResetCode(actionCode)
             .then(email => {
               this.$router.push({
                 path: "/reset-password",
@@ -124,17 +139,36 @@ export default {
             });
           break;
         case "recoverEmail":
-          auth.checkActionCode(actionCode)
+          auth
+            .checkActionCode(actionCode)
             .then(() => {
-              auth.applyActionCode(actionCode)
-                .then(() => this.alertBox.send("success", "Email address successfully changed.", 3000));
+              auth
+                .applyActionCode(actionCode)
+                .then(() =>
+                  this.alertBox.send(
+                    "success",
+                    "Email address successfully changed.",
+                    3000
+                  )
+                );
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));
           this.$router.replace("/");
           break;
         case "verifyEmail":
-          auth.applyActionCode(actionCode)
-            .then(() => this.alertBox.send("success", "Email address successfully verified.", 3000))
+          auth
+            .applyActionCode(actionCode)
+            .then(() => {
+              this.$root.$emit(
+                "onAuthStateChanged",
+                firebase.auth().currentUser
+              );
+              this.alertBox.send(
+                "success",
+                "Email address successfully verified.",
+                3000
+              );
+            })
             .catch(e => this.alertBox.send("error", e.message, 10000));
           this.$router.replace("/");
           break;
