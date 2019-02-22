@@ -6,6 +6,7 @@ import SignUp from "./views/SignUp"
 import Room from "./views/Room"
 import NotFound from "./views/NotFound"
 import ResetPassword from "./views/ResetPassword"
+import Profile from "./views/Profile"
 
 Vue.use(Router)
 
@@ -31,6 +32,9 @@ export default new Router({
     }, {
       path: "/reset-password",
       component: ResetPassword
+    }, {
+      path: "/profile",
+      component: Profile
     }, {
       path: "*",
       component: NotFound

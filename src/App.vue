@@ -19,12 +19,12 @@
           <v-icon>settings</v-icon>
         </v-btn>
         <v-list>
-          <v-list-tile @click="signOut" v-if="currentUser">
+          <v-list-tile to="/profile" v-if="currentUser">
             <v-list-tile-action>
-              <v-icon>exit_to_app</v-icon>
+              <v-icon>person</v-icon>
             </v-list-tile-action>
             <v-list-tile-content>
-              <v-list-tile-title>Log out</v-list-tile-title>
+              <v-list-tile-title>Profile</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
           <v-list-tile @click="toggleDarkMode">
@@ -33,6 +33,15 @@
             </v-list-tile-action>
             <v-list-tile-content>
               <v-list-tile-title>Toggle dark mode</v-list-tile-title>
+            </v-list-tile-content>
+          </v-list-tile>
+          <v-divider v-if="currentUser"></v-divider>
+          <v-list-tile @click="signOut" v-if="currentUser">
+            <v-list-tile-action>
+              <v-icon>exit_to_app</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-list-tile-title>Log out</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
         </v-list>
@@ -44,6 +53,7 @@
         :type="alertBox.type || 'info'"
         dismissible
         transition="slide-y-transition"
+        class="alert"
       >{{ alertBox.text }}</v-alert>
       <router-view/>
     </v-content>
@@ -80,7 +90,12 @@ export default {
       },
       currentUser: this.$root.$children[0].currentUser || null,
       gravatarUrl: null,
-      darkMode: localStorage.getItem("darkMode") ? true : false
+      darkMode:
+        localStorage.getItem("darkMode") === null
+          ? true
+          : localStorage.getItem("darkMode") === "true"
+          ? true
+          : false
     };
   },
   methods: {
@@ -89,7 +104,7 @@ export default {
         .auth()
         .signOut()
         .then(() => {
-          this.alertBox.send("info", "Successfully logged out!", 3000);
+          this.alertBox.send("info", "Logged out", 3000);
         })
         .catch(e => {
           this.alertBox.send("error", e.message, 10000);
@@ -101,19 +116,18 @@ export default {
         email.trim()
       ).toString()}?s=${size}`;
     },
-    openGravatar: function() {
-      window.open("http://gravatar.com/emails/", "_blank");
-    },
     toggleDarkMode() {
       this.darkMode = !this.darkMode;
       this.darkMode
-        ? localStorage.setItem("darkMode", this.darkMode)
-        : localStorage.removeItem("darkMode");
+        ? localStorage.setItem("darkMode", true)
+        : localStorage.setItem("darkMode", false);
     }
   },
   mounted() {
-    firebase.auth().onAuthStateChanged(user => {
+    this.$root.$on("onAuthStateChanged", user => {
       this.currentUser = user;
+    });
+    firebase.auth().onAuthStateChanged(user => {
       this.$root.$emit("onAuthStateChanged", user);
     });
     const mode = this.$route.query.mode;
@@ -142,15 +156,10 @@ export default {
           auth
             .checkActionCode(actionCode)
             .then(() => {
-              auth
-                .applyActionCode(actionCode)
-                .then(() =>
-                  this.alertBox.send(
-                    "success",
-                    "Email address successfully changed.",
-                    3000
-                  )
-                );
+              auth.applyActionCode(actionCode).then(() => {
+                this.alertBox.send("success", "Email address recovered", 3000);
+                if (firebase.currentUser) firebase.auht().currentUser.reload();
+              });
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));
           this.$router.replace("/");

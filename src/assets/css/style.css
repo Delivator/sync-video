@@ -6,3 +6,17 @@
   border-radius: 100%;
   cursor: pointer;
 }
+
+#email:focus {
+  outline: 0;
+}
+
+.hide {
+  display: none;
+}
+
+.alert {
+  position: fixed;
+  width: 100%;
+  z-index: 1;
+}

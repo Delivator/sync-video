@@ -6,7 +6,8 @@
       </v-flex>
 
       <v-flex mb-4>
-        <h1 class="display-2 font-weight-bold mb-3" v-if="currentUser">Welcome back,
+        <h1 class="display-2 font-weight-bold mb-3" v-if="currentUser">
+          Welcome back,
           <span
             class="font-weight-light"
           >{{ currentUser.displayName || currentUser.email || "Guest" }}</span>.
@@ -25,10 +26,7 @@
 </template>
 
 <script>
-import firebase from "firebase";
-
 export default {
-  props: ["alertBox"],
   data() {
     return {
       currentUser: this.$root.$children[0].currentUser,
@@ -46,19 +44,11 @@ export default {
         this.currentUser
           .sendEmailVerification()
           .then(() => {
-            alertBox.send("success", "Verification email send.");
+            alertBox.send("success", "Verification email send");
             this.showVerify = false;
           })
           .catch(e => alertBox.send("error", e.message, 10000));
       }
-      firebase
-        .auth()
-        .signInWithEmailAndPassword(this.email, this.password)
-        .then(() => {
-          alertBox.send("success", "Successfully logged in!", 3000);
-          this.$router.replace("/");
-        })
-        .catch(e => alertBox.send("error", e.message, 10000));
     }
   },
   mounted() {

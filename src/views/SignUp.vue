@@ -2,38 +2,52 @@
   <v-container fluid fill-height>
     <v-layout align-center justify-center>
       <v-flex xs12 sm8 md4>
-        <v-card class="elevation-12">
-          <v-toolbar dark color="primary">
-            <v-toolbar-title>Sign Up</v-toolbar-title>
-          </v-toolbar>
-          <v-card-text>
-            <v-form>
-              <v-text-field
-                :rules="[rules.required, rules.email]"
-                prepend-icon="alternate_email"
-                label="Email"
-                type="email"
-                v-model="email"
-              ></v-text-field>
-              <v-text-field
-                prepend-icon="lock"
-                :append-icon="showPassword ? 'visibility_off' : 'visibility'"
-                :rules="[rules.required, rules.min]"
-                :type="showPassword ? 'text' : 'password'"
-                label="Password"
-                hint="At least 6 characters"
-                counter
-                @click:append="showPassword = !showPassword"
-                v-model="password"
-              ></v-text-field>
-            </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-btn color="primary" to="/login">Login</v-btn>
-            <v-spacer></v-spacer>
-            <v-btn @click="signUp" color="success">Sign Up</v-btn>
-          </v-card-actions>
-        </v-card>
+        <v-form>
+          <v-card class="elevation-12">
+            <v-toolbar dark color="primary">
+              <v-toolbar-title>Sign Up</v-toolbar-title>
+            </v-toolbar>
+            <v-card-text>
+              <div v-if="loading">
+                <v-progress-linear :indeterminate="true"></v-progress-linear>
+              </div>
+              <div v-else>
+                <v-text-field
+                  :rules="[rules.required, rules.email]"
+                  prepend-icon="alternate_email"
+                  label="Email"
+                  type="email"
+                  v-model="email"
+                  ref="email"
+                ></v-text-field>
+                <v-text-field
+                  prepend-icon="lock"
+                  :append-icon="showPassword ? 'visibility_off' : 'visibility'"
+                  :rules="[rules.required, rules.min]"
+                  :type="showPassword ? 'text' : 'password'"
+                  label="Password"
+                  hint="At least 6 characters"
+                  counter
+                  @click:append="showPassword = !showPassword"
+                  v-model="password"
+                  ref="password"
+                ></v-text-field>
+                <v-text-field
+                  :rules="[rules.required]"
+                  prepend-icon="person"
+                  label="Username"
+                  v-model="displayName"
+                  ref="displayName"
+                ></v-text-field>
+              </div>
+            </v-card-text>
+            <v-card-actions>
+              <v-btn color="primary" to="/login">Login</v-btn>
+              <v-spacer></v-spacer>
+              <v-btn @click="signUp" color="success" type="submit">Sign Up</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-form>
       </v-flex>
     </v-layout>
   </v-container>
@@ -45,7 +59,11 @@ import firebase from "firebase";
 export default {
   data() {
     return {
+      email: "",
+      password: "",
       showPassword: false,
+      loading: false,
+      displayName: "",
       rules: {
         required: value => !!value || "Required.",
         min: value => value.length >= 6 || "Min 6 characters",
@@ -57,18 +75,30 @@ export default {
     };
   },
   methods: {
-    signUp: function() {
+    signUp: function(event) {
+      if (event) event.preventDefault();
+      if (
+        !this.$refs.email.valid ||
+        !this.$refs.password.valid ||
+        !this.$refs.displayName.valid
+      ) {
+        this.$refs.email.validate(true);
+        this.$refs.password.validate(true);
+        this.$refs.displayName.validate(true);
+        return;
+      }
       const alertBox = this.$root.$children[0].alertBox;
       firebase
         .auth()
         .createUserWithEmailAndPassword(this.email, this.password)
         .then(user => {
-          alertBox.send(
-            "success",
-            `Account for ${user.user.email} created succesfully!`
-          );
+          if (this.displayName && this.displayName !== "")
+            user.user
+              .updateProfile({ displayName: this.displayName })
+              .catch(e => alertBox.send("error", e.message, 10000));
           this.$router.replace("/");
           this.$root.$emit("onAuthStateChanged", user.user);
+          alertBox.send("success", `Account for ${user.user.email} created`);
         })
         .catch(e => {
           alertBox.send("error", e.message, 10000);
