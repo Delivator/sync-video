@@ -42,7 +42,7 @@
               </div>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="primary" to="/login">Login</v-btn>
+              <v-btn color="primary" to="/login">Login <v-icon>keyboard_arrow_right</v-icon></v-btn>
               <v-spacer></v-spacer>
               <v-btn @click="signUp" color="success" type="submit">Sign Up</v-btn>
             </v-card-actions>
@@ -63,7 +63,7 @@ export default {
       password: "",
       showPassword: false,
       loading: false,
-      displayName: "",
+      displayName: this.generateUsername(),
       rules: {
         required: value => !!value || "Required.",
         min: value => value.length >= 6 || "Min 6 characters",
@@ -103,6 +103,13 @@ export default {
         .catch(e => {
           alertBox.send("error", e.message, 10000);
         });
+    },
+    generateUsername() {
+      let number = Math.floor((Math.random() * 9999) + 1).toString();
+      while (number.length < 4) {
+        number = "0" + number;
+      }
+      return "User#" + number;
     }
   }
 };

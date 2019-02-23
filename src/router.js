@@ -7,8 +7,11 @@ import Room from "./views/Room"
 import NotFound from "./views/NotFound"
 import ResetPassword from "./views/ResetPassword"
 import Profile from "./views/Profile"
+import Rooms from "./views/Rooms"
+import VueYoutube from 'vue-youtube'
 
 Vue.use(Router)
+Vue.use(VueYoutube)
 
 export default new Router({
   mode: 'history',
@@ -35,6 +38,9 @@ export default new Router({
     }, {
       path: "/profile",
       component: Profile
+    }, {
+      path: "/rooms",
+      component: Rooms
     }, {
       path: "*",
       component: NotFound

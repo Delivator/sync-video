@@ -7,10 +7,10 @@
             <span class="headline">Login</span>
           </v-card-title>
           <v-card-text>
-            <v-text-field v-model="loginEmail" label="Email*" :rules="[rules.required]"></v-text-field>
+            <v-text-field v-model="loginEmail" label="Email" :rules="[rules.required]"></v-text-field>
             <v-text-field
               v-model="loginPassword"
-              label="Password*"
+              label="Password"
               type="password"
               :rules="[rules.required]"
             ></v-text-field>

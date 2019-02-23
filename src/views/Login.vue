@@ -35,7 +35,9 @@
               </div>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="primary" to="/sign-up">Sign Up</v-btn>
+              <v-btn color="primary" to="/sign-up">
+                <v-icon>keyboard_arrow_left</v-icon>Sign Up
+              </v-btn>
               <v-spacer></v-spacer>
               <v-btn @click="resetPassword" color="error">Reset Password</v-btn>
               <v-btn @click="login" color="success" type="submit">Login</v-btn>

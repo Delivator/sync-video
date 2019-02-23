@@ -27,6 +27,14 @@
               <v-list-tile-title>Profile</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
+          <v-list-tile to="/rooms" v-if="currentUser">
+            <v-list-tile-action>
+              <v-icon>menu</v-icon>
+            </v-list-tile-action>
+            <v-list-tile-content>
+              <v-list-tile-title>Rooms</v-list-tile-title>
+            </v-list-tile-content>
+          </v-list-tile>
           <v-list-tile @click="toggleDarkMode">
             <v-list-tile-action>
               <v-icon>invert_colors</v-icon>
@@ -158,7 +166,7 @@ export default {
             .then(() => {
               auth.applyActionCode(actionCode).then(() => {
                 this.alertBox.send("success", "Email address recovered", 3000);
-                if (firebase.currentUser) firebase.auht().currentUser.reload();
+                if (firebase.auth().currentUser) firebase.auht().currentUser.reload();
               });
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));
