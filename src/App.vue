@@ -155,7 +155,7 @@ export default {
       this.currentUser
         .getIdToken()
         .then(token => {
-          this.socket = io(`${settings.nodeServerAddress}:${settings.nodeServerPort}`, {
+          this.socket = io(settings.socketUrl, {
             query: {
               token
             }
@@ -163,7 +163,7 @@ export default {
         })
         .catch(e => this.alertBox.send("error", e.message, 10000));
     } else {
-      this.socket = io(`${settings.nodeServerAddress}:${settings.nodeServerPort}`);
+      this.socket = io(settings.socketUrl);
     }
 
     if (mode && actionCode) {

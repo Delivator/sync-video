@@ -1,3 +1,4 @@
 {
-  "nodeServerAddress": "http://YOUR_SERVER_IP:SERVER_PORT"
+  "nodeServerPort": "NODE_SERVER_PORT",
+  "socketUrl": "http://URL_TO_YOUR_NODE_SERVER/"
 }
