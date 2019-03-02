@@ -82,7 +82,6 @@ export default {
   name: "App",
   data() {
     return {
-      test: "TestString",
       alertBox: {
         show: false,
         type: "info",
