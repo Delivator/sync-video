@@ -1,6 +1,6 @@
-import Vue from 'vue'
-import Router from 'vue-router'
-import Home from './views/Home.vue'
+import Vue from "vue"
+import Router from "vue-router"
+import Home from "./views/Home.vue"
 import Login from "./views/Login"
 import SignUp from "./views/SignUp"
 import Room from "./views/Room"
@@ -8,7 +8,7 @@ import NotFound from "./views/NotFound"
 import ResetPassword from "./views/ResetPassword"
 import Profile from "./views/Profile"
 import Rooms from "./views/Rooms"
-import VueYoutube from 'vue-youtube'
+import VueYoutube from "vue-youtube"
 
 Vue.use(Router)
 Vue.use(VueYoutube)

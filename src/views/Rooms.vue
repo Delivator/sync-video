@@ -20,6 +20,7 @@
               label="URL"
               :rules="[rules.required, rules.path]"
               :hint="hintText"
+              persistent-hint
               counter
               maxlength="32"
               ref="path"
@@ -42,7 +43,7 @@
             <template v-for="room in rooms">
               <v-btn :key="room.id" :to="`/r/${room.id}`">{{room.data().title}}</v-btn>
             </template>
-            <v-divider></v-divider>
+            <v-divider id="rooms-divider"></v-divider>
           </div>
           <div v-else>
             <h4 class="display-1">You don't have any rooms yet, click here to create one.</h4>
@@ -57,15 +58,21 @@
     </v-layout>
   </v-container>
 </template>
+
+<style>
+@import "../assets/css/style.css";
+</style>
+
 <script>
 import firebase from "firebase";
+import { setTimeout } from "timers";
 
 export default {
+  props: ["alertBox", "currentUser"],
   data() {
     return {
-      currentUser: this.$root.$children[0].currentUser,
       db: null,
-      rooms: this.getRooms(),
+      rooms: null,
       dialog: null,
       title: "",
       path: "",
@@ -83,20 +90,19 @@ export default {
   },
   methods: {
     getRooms() {
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.currentUser) return;
-      this.db
-        .collection("rooms")
-        .where("owner", "==", this.currentUser.uid)
-        .get()
-        .then(querySnapshot => {
-          if (!querySnapshot.empty) this.rooms = querySnapshot.docs;
-          return querySnapshot.docs;
-        })
-        .catch(e => alertBox.send("error", e.message, 10000));
+      if (this.db)
+        this.db
+          .collection("rooms")
+          .where("owner", "==", this.currentUser.uid)
+          .get()
+          .then(querySnapshot => {
+            if (!querySnapshot.empty) this.rooms = querySnapshot.docs;
+            return querySnapshot.docs;
+          })
+          .catch(e => this.alertBox.send("error", e.message, 10000));
     },
     addRoom(event) {
-      const alertBox = this.$root.$children[0].alertBox;
       if (event) event.preventDefault();
       if (!this.$refs.title.valid || !this.$refs.path.valid) {
         this.$refs.title.validate(true);
@@ -113,20 +119,41 @@ export default {
           public: this.isPublic
         })
         .then(() => {
-          alertBox.send("success", "Room created", 3000);
+          this.alertBox.send("success", "Room created", 3000);
           this.$router.push(`/r/${this.path}`);
         })
-        .catch(e => alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e.message, 10000));
+    },
+    generateRoomPath(input) {
+      if (!input || !typeof input === "string" || input.length < 1) return "";
+      let path = "";
+      const pattern = /^[a-zA-Z0-9]{1,32}$/;
+      for (const c of input) {
+        if (pattern.test(c)) path += c;
+      }
+      return path;
     }
   },
   mounted() {
-    this.$root.$on("onAuthStateChanged", user => {
-      this.currentUser = user;
-      this.getRooms();
-    });
     this.db = firebase.firestore();
+    this.$root.$on("onAuthStateChanged", user => {
+      if (user.displayName) this.title = `${user.displayName}'s Room`;
+      if (user.displayName) this.path = this.generateRoomPath(user.displayName);
+      setTimeout(() => this.getRooms(), 0);
+    });
     if (this.currentUser) {
       this.getRooms();
+      if (this.currentUser.displayName) {
+        this.title = `${this.currentUser.displayName}'s Room`;
+        this.path = this.generateRoomPath(this.currentUser.displayName);
+      }
+      if (this.db)
+        this.db
+          .collection("rooms")
+          .where("owner", "==", this.currentUser.uid)
+          .onSnapshot(documentSnapshot => {
+            if (!documentSnapshot.empty) this.rooms = documentSnapshot.docs;
+          });
     }
   },
   computed: {

@@ -20,3 +20,49 @@
   width: 100%;
   z-index: 1;
 }
+
+#playerFlex {
+  transition: 300ms max-width, 300ms flex-basis;
+  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+}
+
+#rooms-divider {
+  margin: 1rem 0;
+}
+
+.user-list {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.user-list::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.user-list::-webkit-scrollbar-button {
+  width: 0px;
+  height: 0px;
+}
+.user-list::-webkit-scrollbar-thumb {
+  background: #e1e1e1;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+.user-list::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+}
+.user-list::-webkit-scrollbar-thumb:active {
+  background: #303030;
+}
+.user-list::-webkit-scrollbar-track {
+  background: #666666;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+.user-list::-webkit-scrollbar-track:hover {
+  background: #666666;
+}
+.user-list::-webkit-scrollbar-corner {
+  background: transparent;
+}

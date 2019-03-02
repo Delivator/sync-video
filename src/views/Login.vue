@@ -53,6 +53,7 @@
 import firebase from "firebase";
 
 export default {
+  props: ["alertBox"],
   data() {
     return {
       email: "",
@@ -72,7 +73,6 @@ export default {
   methods: {
     login: function(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.$refs.email.valid) {
         this.$refs.email.validate(true);
         return;
@@ -84,15 +84,14 @@ export default {
         .then(() => {
           this.loading = false;
           this.$router.replace("/");
-          alertBox.send("success", "Logged in", 3000);
+          this.alertBox.send("success", "Logged in", 3000);
         })
         .catch(e => {
           this.loading = false;
-          alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     },
     resetPassword: function() {
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.$refs.email.valid) {
         this.$refs.email.validate(true);
         return;
@@ -104,11 +103,11 @@ export default {
         .then(() => {
           this.loading = false;
           this.$router.push("/");
-          alertBox.send("success", "Password reset mail send");
+          this.alertBox.send("success", "Password reset mail send");
         })
         .catch(e => {
           this.loading = false;
-          alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     }
   }

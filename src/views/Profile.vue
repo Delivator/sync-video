@@ -110,28 +110,20 @@ import firebase from "firebase";
 import { MD5 } from "crypto-js";
 
 export default {
+  props: ["alertBox", "currentUser"],
   data() {
     return {
-      currentUser: this.$root.$children[0].currentUser,
       emailChanged: false,
       displayNameChanged: false,
       dialog: false,
       loginEmail:
-        this.$root.$children[0].currentUser &&
-        this.$root.$children[0].currentUser.email
-          ? this.$root.$children[0].currentUser.email
+        this.currentUser && this.currentUser.email
+          ? this.currentUser.email
           : "",
       loginPassword: "",
-      email:
-        this.$root.$children[0].currentUser &&
-        this.$root.$children[0].currentUser.email
-          ? this.$root.$children[0].currentUser.email
-          : null,
+      email: this.currentUser && this.currentUser.email ? this.currentUser.email : "",
       displayName:
-        this.$root.$children[0].currentUser &&
-        this.$root.$children[0].currentUser.displayName
-          ? this.$root.$children[0].currentUser.displayName
-          : null,
+        this.currentUser && this.currentUser.displayName ? this.currentUser.displayName : "",
       rules: {
         required: value => !!value || "Required.",
         email: value => {
@@ -144,7 +136,6 @@ export default {
   methods: {
     reauthenticateAndChangeEmail(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       firebase
         .auth()
         .EmailAuthProvider(this.loginEmail, this.loginPassword)
@@ -152,25 +143,23 @@ export default {
           this.currentUser
             .reauthenticateAndRetrieveDataWithCredential(cred)
             .then(() => this.changeEmail())
-            .catch(e => alertBox.send("error", e.message, 10000));
+            .catch(e => this.alertBox.send("error", e.message, 10000));
         })
-        .catch(e => alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e.message, 10000));
     },
     changeEmail(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.currentUser || !this.email || !this.$refs.email.valid) return;
       this.currentUser
         .updateEmail(this.email)
-        .then(() => alertBox.send("success", "E-mail address changed"))
+        .then(() => this.alertBox.send("success", "E-mail address changed"))
         .catch(e => {
           if (e.code === "auth/requires-recent-login") this.dialog = true;
-          alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     },
     changeDisplayName(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.currentUser) return;
       if (!this.$refs.displayName.valid) {
         return this.$refs.displayName.validate(true);
@@ -178,18 +167,18 @@ export default {
       this.currentUser
         .updateProfile({ displayName: this.displayName })
         .then(() => {
-          alertBox.send("success", "Username updated", 3000);
+          this.alertBox.send("success", "Username updated", 3000);
           this.currentUser = firebase.auth().currentUser;
           this.checkDisplayNameInput();
         })
-        .catch(e => alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e.message, 10000));
     },
     checkEmailInput() {
       setTimeout(() => {
         if (this.currentUser && this.currentUser.email)
           this.emailChanged =
             this.email !== this.currentUser.email && this.$refs.email.valid;
-      });
+      }, 0);
     },
     checkDisplayNameInput() {
       setTimeout(() => {
@@ -213,7 +202,6 @@ export default {
   },
   mounted() {
     this.$root.$on("onAuthStateChanged", user => {
-      this.currentUser = user;
       if (user) {
         this.email = user.email;
         this.displayName = user.displayName;

@@ -83,19 +83,19 @@
 import firebase from "firebase";
 
 export default {
+  props: ["alertBox", "currentUser"],
   data() {
     return {
       loginEmail:
-        this.$root.$children[0].currentUser &&
-        this.$root.$children[0].currentUser.email
-          ? this.$root.$children[0].currentUser.email
+        this.currentUser &&
+        this.currentUser.email
+          ? this.currentUser.email
           : "",
       loginPassword: "",
       password: "",
       showPassword: false,
       email: null,
       actionCode: null,
-      currentUser: this.$root.$children[0].currentUser,
       dialog: false,
       rules: {
         required: value => !!value || "Required.",
@@ -116,7 +116,6 @@ export default {
         this.$refs.loginPassword.validate(true);
         return;
       }
-      const alertBox = this.$root.$children[0].alertBox;
       firebase
         .auth()
         .EmailAuthProvider(this.loginEmail, this.loginPassword)
@@ -124,13 +123,12 @@ export default {
           this.currentUser
             .reauthenticateAndRetrieveDataWithCredential(cred)
             .then(() => this.changePassword())
-            .catch(e => alertBox.send("error", e.message, 10000));
+            .catch(e => this.alertBox.send("error", e.message, 10000));
         })
-        .catch(e => alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e.message, 10000));
     },
     confirm(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.$refs.password.valid) {
         this.$refs.password.validate(true);
         return;
@@ -139,33 +137,31 @@ export default {
         .auth()
         .confirmPasswordReset(this.actionCode, this.password)
         .then(() => {
-          alertBox.send(
+          this.alertBox.send(
             "success",
             "Password changed. You can now log in wiht your new password."
           );
           this.$router.replace("/login");
         })
-        .catch(e => alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e.message, 10000));
     },
     changePassword(event) {
       if (event) event.preventDefault();
-      const alertBox = this.$root.$children[0].alertBox;
       if (!this.$refs.password.valid) {
         this.$refs.password.validate(true);
         return;
       }
       this.currentUser
         .updatePassword(this.password)
-        .then(() => alertBox.send("success", "Password changed"))
+        .then(() => this.alertBox.send("success", "Password changed"))
         .catch(e => {
           if (e.code === "auth/requires-recent-login") this.dialog = true;
-          alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     }
   },
   mounted() {
     this.$root.$on("onAuthStateChanged", user => {
-      this.currentUser = user;
       if (user && user.email) this.loginEmail = user.email;
     });
     this.email = this.$route.query.email;

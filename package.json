@@ -6,11 +6,15 @@
     "serve": "vue-cli-service serve",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint",
-    "start": "serve -s dist"
+    "start": "node server.js"
   },
   "dependencies": {
+    "connect-history-api-fallback": "^1.6.0",
     "crypto-js": "^3.1.9-1",
+    "express": "^4.16.4",
     "firebase": "^5.8.3",
+    "firebase-admin": "^7.0.0",
+    "socket.io": "^2.2.0",
     "vue": "^2.5.22",
     "vue-router": "^3.0.1",
     "vue-youtube": "^1.3.4",

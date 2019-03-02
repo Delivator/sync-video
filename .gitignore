@@ -20,3 +20,5 @@ yarn-error.log*
 *.sln
 *.sw*
 src/firebase.json
+serviceAccountKey.json
+src/settings.json

@@ -57,6 +57,7 @@
 import firebase from "firebase";
 
 export default {
+  props: ["alertBox"],
   data() {
     return {
       email: "",
@@ -87,7 +88,6 @@ export default {
         this.$refs.displayName.validate(true);
         return;
       }
-      const alertBox = this.$root.$children[0].alertBox;
       firebase
         .auth()
         .createUserWithEmailAndPassword(this.email, this.password)
@@ -95,13 +95,12 @@ export default {
           if (this.displayName && this.displayName !== "")
             user.user
               .updateProfile({ displayName: this.displayName })
-              .catch(e => alertBox.send("error", e.message, 10000));
+              .catch(e => this.alertBox.send("error", e.message, 10000));
           this.$router.replace("/");
-          this.$root.$emit("onAuthStateChanged", user.user);
-          alertBox.send("success", `Account for ${user.user.email} created`);
+          this.alertBox.send("success", `Account for ${user.user.email} created`);
         })
         .catch(e => {
-          alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e.message, 10000);
         });
     },
     generateUsername() {

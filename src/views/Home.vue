@@ -27,15 +27,14 @@
 
 <script>
 export default {
+  props: ["alertBox", "currentUser"],
   data() {
     return {
-      currentUser: this.$root.$children[0].currentUser,
       showVerify: true
     };
   },
   methods: {
     verifyEmail: function() {
-      const alertBox = this.$root.$children[0].alertBox;
       if (
         this.currentUser &&
         this.currentUser.email &&
@@ -44,17 +43,12 @@ export default {
         this.currentUser
           .sendEmailVerification()
           .then(() => {
-            alertBox.send("success", "Verification email send");
+            this.alertBox.send("success", "Verification email send");
             this.showVerify = false;
           })
-          .catch(e => alertBox.send("error", e.message, 10000));
+          .catch(e => this.alertBox.send("error", e.message, 10000));
       }
     }
-  },
-  mounted() {
-    this.$root.$on("onAuthStateChanged", user => {
-      this.currentUser = user;
-    });
   }
 };
 </script>

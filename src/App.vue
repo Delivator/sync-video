@@ -63,7 +63,7 @@
         transition="slide-y-transition"
         class="alert"
       >{{ alertBox.text }}</v-alert>
-      <router-view/>
+      <router-view :alertBox="alertBox" :currentUser="currentUser" :socket="socket"/>
     </v-content>
   </v-app>
 </template>
@@ -74,12 +74,15 @@
 
 <script>
 import firebase from "firebase";
+import io from "socket.io-client";
 import { MD5 } from "crypto-js";
+import settings from "./settings.json";
 
 export default {
   name: "App",
   data() {
     return {
+      test: "TestString",
       alertBox: {
         show: false,
         type: "info",
@@ -96,8 +99,9 @@ export default {
           }, timeout);
         }
       },
-      currentUser: this.$root.$children[0].currentUser || null,
+      currentUser: null,
       gravatarUrl: null,
+      socket: null,
       darkMode:
         localStorage.getItem("darkMode") === null
           ? true
@@ -132,14 +136,37 @@ export default {
     }
   },
   mounted() {
-    this.$root.$on("onAuthStateChanged", user => {
-      this.currentUser = user;
-    });
-    firebase.auth().onAuthStateChanged(user => {
-      this.$root.$emit("onAuthStateChanged", user);
-    });
     const mode = this.$route.query.mode;
     const actionCode = this.$route.query.oobCode;
+
+    firebase.auth().onAuthStateChanged(user => {
+      this.currentUser = user;
+      this.$root.$emit("onAuthStateChanged", user);
+      if (user && this.socket && this.socket.connected) {
+        user
+          .getIdToken()
+          .then(token => {
+            this.socket.emit("authenticate", token);
+          })
+          .catch(e => this.alertBox.send("error", e.message, 10000));
+      }
+    });
+
+    if (this.currentUser) {
+      this.currentUser
+        .getIdToken()
+        .then(token => {
+          this.socket = io(`${settings.nodeServerAddress}:${settings.nodeServerPort}`, {
+            query: {
+              token
+            }
+          });
+        })
+        .catch(e => this.alertBox.send("error", e.message, 10000));
+    } else {
+      this.socket = io(`${settings.nodeServerAddress}:${settings.nodeServerPort}`);
+    }
+
     if (mode && actionCode) {
       const auth = firebase.auth();
       switch (mode) {
@@ -165,8 +192,9 @@ export default {
             .checkActionCode(actionCode)
             .then(() => {
               auth.applyActionCode(actionCode).then(() => {
+                if (firebase.auth().currentUser)
+                  firebase.auht().currentUser.reload();
                 this.alertBox.send("success", "Email address recovered", 3000);
-                if (firebase.auth().currentUser) firebase.auht().currentUser.reload();
               });
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));
@@ -176,15 +204,9 @@ export default {
           auth
             .applyActionCode(actionCode)
             .then(() => {
-              this.$root.$emit(
-                "onAuthStateChanged",
-                firebase.auth().currentUser
-              );
-              this.alertBox.send(
-                "success",
-                "Email address successfully verified.",
-                3000
-              );
+              if (firebase.auth().currentUser)
+                firebase.auht().currentUser.reload();
+              this.alertBox.send("success", "Email address verified", 3000);
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));
           this.$router.replace("/");
