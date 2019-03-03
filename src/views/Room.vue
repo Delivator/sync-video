@@ -80,12 +80,21 @@
           </v-toolbar>
           <v-card-text ref="player">
             <v-responsive :aspect-ratio="16/9" max-height="100vh">
+              <v-container v-if="!queue || queue.length < 1" fluid fill-height>
+                <v-layout align-center justify-center>
+                  <v-flex xs12>
+                    <h1>No videos in queue</h1>
+                  </v-flex>
+                </v-layout>
+              </v-container>
               <youtube
-                :video-id="videoId"
+                :video-id="playerData.videoId"
                 @ready="playerReady"
                 @playing="onPlay"
                 @paused="onPause"
                 @buffering="onBuffering"
+                @ended="onEnded"
+                @cued="onCued"
                 :player-vars="playerVars"
                 ref="youtube"
                 width="100%"
@@ -98,15 +107,10 @@
       <v-flex
         v-if="roomData"
         :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl4'"
-        id="playerFlex"
       >
         <v-card>
           <v-toolbar dark color="primary">
             <v-toolbar-title>Chat</v-toolbar-title>
-            <v-spacer></v-spacer>
-            <v-btn icon v-if="roomData && users !== []">
-              <v-icon>menu</v-icon>
-            </v-btn>
           </v-toolbar>
           <v-card-text>
             <div v-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
@@ -118,6 +122,42 @@
               </v-chip>
             </div>
             <p></p>
+          </v-card-text>
+        </v-card>
+      </v-flex>
+      <v-flex
+        v-if="roomData"
+        :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl10'"
+      >
+        <v-card>
+          <v-toolbar dark color="primary">
+            <v-toolbar-title>Playlist</v-toolbar-title>
+          </v-toolbar>
+          <v-card-text>
+            <v-text-field label="YouTube URL" v-model="youtubeSearch">
+              <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
+            </v-text-field>
+            <div v-if="queue && queue.length > 0">
+              <v-list>
+                <v-list-tile v-for="video in queue" :key="video.uid" avatar>
+                  <img
+                    :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                    height="50"
+                    width="88.889"
+                    class="playlist-thumbnail"
+                  >
+                  <v-list-tile-content>
+                    <v-list-tile-title>https://www.youtube.com/watch?v={{video.videoId}}</v-list-tile-title>
+                  </v-list-tile-content>
+                  <v-spacer></v-spacer>
+                  <v-icon @click="pushVideo(video.uid)" color="success">play_arrow</v-icon>
+                  <v-icon @click="removeVideo(video.uid)" color="error">close</v-icon>
+                </v-list-tile>
+              </v-list>
+            </div>
+            <div v-else>
+              <p>No videos in queue</p>
+            </div>
           </v-card-text>
         </v-card>
       </v-flex>
@@ -135,7 +175,8 @@
 </style>
 
 <script>
-import firebase from "firebase";
+import firebase from "firebase/app";
+import "firebase/firestore";
 
 export default {
   props: ["alertBox", "currentUser", "socket"],
@@ -148,14 +189,20 @@ export default {
       dialog2: false,
       title: "",
       isPublic: false,
-      videoId: "3XS6azLKsNY",
       playerVars: {
         autoplay: 1
+      },
+      playerData: {
+        videoSource: "",
+        videoId: ""
       },
       dbListener: null,
       theatre: false,
       users: [],
-      preventPlayerEvents: false,
+      preventPlayerEvents: true,
+      youtubeSearch: "",
+      queue: [],
+      seekAfterBuffer: false,
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -223,18 +270,22 @@ export default {
       function animateScroll(x) {
         if (x <= 0) return;
         setTimeout(() => {
-          userList.scrollLeft -= delta / 50;
+          userList.scrollLeft -= delta / 100;
           animateScroll(--x);
         }, 0);
       }
-      animateScroll(25);
+      animateScroll(30);
       e.preventDefault();
     },
     playerReady() {
-      console.log("playerReady");
       setTimeout(() => {
+        this.preventPlayerEvents = true;
         this.$refs.youtube.player.pauseVideo();
         this.$refs.youtube.player.seekTo(0);
+        if (this.socket && this.socket.connected)
+          this.socket.emit("getQueue", this.roomID);
+        if (this.socket && this.socket.connected)
+          this.socket.emit("getPlayerStatus", this.roomID);
       }, 1000);
     },
     onPlay() {
@@ -261,6 +312,12 @@ export default {
     },
     onBuffering() {
       console.log("onBuffering");
+      // if (this.seekAfterBuffer) {
+      //   this.seekAfterBuffer = false;
+      //   setTimeout(() => {
+      //     this.$refs.youtube.player.seekTo(0);
+      //   }, 1000);
+      // }
       // if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       // this.preventPlayerEvents = true;
       // this.$refs.youtube.player.pauseVideo();
@@ -272,6 +329,34 @@ export default {
       //     });
       //   });
       // }
+    },
+    onCued() {
+      console.log("onCued");
+    },
+    onEnded() {
+      if (this.queue.length > 0) {
+        this.preventPlayerEvents = true;
+        console.log("removing", this.queue[0].uid, "from", this.roomID);
+        if (this.socket && this.socket.connected)
+          this.socket.emit("removeVideo", this.roomID, this.queue[0].uid);
+      }
+    },
+    addVideo() {
+      const ytId = this.$youtube.getIdFromUrl(this.youtubeSearch);
+      if (!ytId) return;
+      if (this.socket && this.socket.connected)
+        this.socket.emit("sendVideoUpdate", this.roomID, {
+          videoSource: "youtube",
+          videoId: ytId
+        });
+    },
+    removeVideo(uid) {
+      if ((!!uid, this.socket && this.socket.connected))
+        this.socket.emit("removeVideo", this.roomID, uid);
+    },
+    pushVideo(uid) {
+      if ((!!uid, this.socket && this.socket.connected))
+        this.socket.emit("pushVideo", this.roomID, uid);
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -321,17 +406,35 @@ export default {
             console.log("updatePlayer", data);
           });
           this.socket.on("roomUsersUpdate", users => {
-            console.log("roomUsersUpdate", users);
             if (users) this.users = users;
           });
           this.socket.on("playerStatusUpdate", playerStatus => {
+            console.log("playerStatusUpdate", playerStatus);
             if (playerStatus.status === "pause") {
               this.preventPlayerEvents = true;
               this.$refs.youtube.player.pauseVideo();
               this.$refs.youtube.player.seekTo(playerStatus.currentTime);
             } else if (playerStatus.status === "play") {
               this.preventPlayerEvents = true;
+              this.$refs.youtube.player.getCurrentTime().then(time => {
+                if (
+                  time < playerStatus.currentTime - 1 ||
+                  time > playerStatus.currentTime
+                )
+                  this.$refs.youtube.player.seekTo(playerStatus.currentTime);
+              });
               this.$refs.youtube.player.playVideo();
+            }
+          });
+          this.socket.on("updateQueue", queue => {
+            if (queue) this.queue = queue;
+            this.seekAfterBuffer = true;
+            if (queue && queue.length > 0) {
+              this.playerData.videoSource = queue[0].videoSource || "";
+              this.playerData.videoId = queue[0].videoId || "x";
+            } else {
+              this.playerData.videoSource = "";
+              this.playerData.videoId = "x";
             }
           });
         }

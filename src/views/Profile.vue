@@ -106,7 +106,8 @@
 </style>
 
 <script>
-import firebase from "firebase";
+import firebase from "firebase/app";
+import "firebase/auth";
 import { MD5 } from "crypto-js";
 
 export default {
@@ -121,9 +122,14 @@ export default {
           ? this.currentUser.email
           : "",
       loginPassword: "",
-      email: this.currentUser && this.currentUser.email ? this.currentUser.email : "",
+      email:
+        this.currentUser && this.currentUser.email
+          ? this.currentUser.email
+          : "",
       displayName:
-        this.currentUser && this.currentUser.displayName ? this.currentUser.displayName : "",
+        this.currentUser && this.currentUser.displayName
+          ? this.currentUser.displayName
+          : "",
       rules: {
         required: value => !!value || "Required.",
         email: value => {

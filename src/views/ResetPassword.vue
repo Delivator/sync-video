@@ -38,7 +38,7 @@
             </v-toolbar>
             <v-card-text>
               <v-form @submit="submit">
-                <h6 class="title" v-if="email">
+                <h6 class="title" v-if="email && actionCode">
                   Reset password for
                   <span class="font-weight-light">{{ email }}</span>
                 </h6>
@@ -70,7 +70,12 @@
                 v-if="email && actionCode"
                 type="submit"
               >Confirm</v-btn>
-              <v-btn @click="changePassword" color="success" v-if="currentUser" type="submit">Change</v-btn>
+              <v-btn
+                @click="changePassword"
+                color="success"
+                v-if="currentUser && !(email || actionCode)"
+                type="submit"
+              >Change</v-btn>
             </v-card-actions>
           </v-card>
         </v-form>
@@ -80,15 +85,15 @@
 </template>
 
 <script>
-import firebase from "firebase";
+import firebase from "firebase/app";
+import "firebase/auth";
 
 export default {
   props: ["alertBox", "currentUser"],
   data() {
     return {
       loginEmail:
-        this.currentUser &&
-        this.currentUser.email
+        this.currentUser && this.currentUser.email
           ? this.currentUser.email
           : "",
       loginPassword: "",

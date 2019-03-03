@@ -73,7 +73,8 @@
 </style>
 
 <script>
-import firebase from "firebase";
+import firebase from "firebase/app";
+import "firebase/auth";
 import io from "socket.io-client";
 import { MD5 } from "crypto-js";
 import settings from "./settings.json";
@@ -204,7 +205,7 @@ export default {
             .applyActionCode(actionCode)
             .then(() => {
               if (firebase.auth().currentUser)
-                firebase.auht().currentUser.reload();
+                firebase.auth().currentUser.reload();
               this.alertBox.send("success", "Email address verified", 3000);
             })
             .catch(e => this.alertBox.send("error", e.message, 10000));

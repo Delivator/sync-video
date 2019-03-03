@@ -66,3 +66,7 @@
 .user-list::-webkit-scrollbar-corner {
   background: transparent;
 }
+
+.playlist-thumbnail {
+  margin-right: 1em;
+}

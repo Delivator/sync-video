@@ -1,46 +1,46 @@
 import Vue from "vue"
 import Router from "vue-router"
 import Home from "./views/Home.vue"
-import Login from "./views/Login"
-import SignUp from "./views/SignUp"
-import Room from "./views/Room"
 import NotFound from "./views/NotFound"
-import ResetPassword from "./views/ResetPassword"
-import Profile from "./views/Profile"
-import Rooms from "./views/Rooms"
 import VueYoutube from "vue-youtube"
 
 Vue.use(Router)
 Vue.use(VueYoutube)
 
 export default new Router({
-  mode: 'history',
+  mode: "history",
   base: process.env.BASE_URL,
   routes: [
     {
-      path: '/',
+      path: "/",
       component: Home,
       meta: {
         title: "Home"
       }
     }, {
-      path: '/login',
-      component: Login
+      path: "/login",
+      name: "login",
+      component: () => import("./views/Login")
     }, {
-      path: '/sign-up',
-      component: SignUp
+      path: "/sign-up",
+      name: "sign-up",
+      component: () => import("./views/SignUp")
     }, {
       path: "/r/:id",
-      component: Room
+      name: "room",
+      component: () => import("./views/Room")
     }, {
       path: "/reset-password",
-      component: ResetPassword
+      name: "reset-password",
+      component: () => import("./views/ResetPassword")
     }, {
       path: "/profile",
-      component: Profile
+      name: "profile",
+      component: () => import("./views/Profile")
     }, {
       path: "/rooms",
-      component: Rooms
+      name: "rooms",
+      component: () => import("./views/Rooms")
     }, {
       path: "*",
       component: NotFound
