@@ -95,6 +95,7 @@
                 @buffering="onBuffering"
                 @ended="onEnded"
                 @cued="onCued"
+                @error="youtubeOnError"
                 :player-vars="playerVars"
                 ref="youtube"
                 width="100%"
@@ -202,7 +203,6 @@ export default {
       preventPlayerEvents: true,
       youtubeSearch: "",
       queue: [],
-      seekAfterBuffer: false,
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -280,13 +280,13 @@ export default {
     playerReady() {
       setTimeout(() => {
         this.preventPlayerEvents = true;
-        this.$refs.youtube.player.pauseVideo();
-        this.$refs.youtube.player.seekTo(0);
         if (this.socket && this.socket.connected)
           this.socket.emit("getQueue", this.roomID);
+      }, 0);
+      setTimeout(() => {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
-      }, 1000);
+      }, 1500);
     },
     onPlay() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
@@ -312,23 +312,6 @@ export default {
     },
     onBuffering() {
       console.log("onBuffering");
-      // if (this.seekAfterBuffer) {
-      //   this.seekAfterBuffer = false;
-      //   setTimeout(() => {
-      //     this.$refs.youtube.player.seekTo(0);
-      //   }, 1000);
-      // }
-      // if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
-      // this.preventPlayerEvents = true;
-      // this.$refs.youtube.player.pauseVideo();
-      // if (this.roomID && this.socket) {
-      //   this.$refs.youtube.player.getCurrentTime().then(time => {
-      //     this.socket.emit("sendPlayerStatusUpdate", {
-      //       status: "pause",
-      //       currentTime: time
-      //     });
-      //   });
-      // }
     },
     onCued() {
       console.log("onCued");
@@ -357,6 +340,9 @@ export default {
     pushVideo(uid) {
       if ((!!uid, this.socket && this.socket.connected))
         this.socket.emit("pushVideo", this.roomID, uid);
+    },
+    youtubeOnError(e) {
+      if (e) console.log("youtubeOnError", e);
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -402,9 +388,6 @@ export default {
                 .catch(e => this.alertBox.send("error", e.message, 10000));
             }
           });
-          this.socket.on("updatePlayer", data => {
-            console.log("updatePlayer", data);
-          });
           this.socket.on("roomUsersUpdate", users => {
             if (users) this.users = users;
           });
@@ -428,7 +411,6 @@ export default {
           });
           this.socket.on("updateQueue", queue => {
             if (queue) this.queue = queue;
-            this.seekAfterBuffer = true;
             if (queue && queue.length > 0) {
               this.playerData.videoSource = queue[0].videoSource || "";
               this.playerData.videoId = queue[0].videoId || "x";
