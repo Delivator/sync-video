@@ -123,13 +123,13 @@ io.on("connection", (socket) => {
     socket.join(room);
     setTimeout(() => {
       io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
-      if (rooms.room && rooms.room.queue) socket.emit("updateQueue", rooms.room.queue);
+      if (rooms[room] && rooms[room].queue) socket.emit("updateQueue", rooms[room].queue);
     }, 0);
   });
 
   socket.on("leaveRoom", (room) => {
     if (!room || room === "") return;
-    console.log("socked", socket.displayName, " left room", room);
+    console.log("socked", socket.displayName, "left room", room);
     io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
     socket.leave(room);
   });
@@ -165,53 +165,53 @@ io.on("connection", (socket) => {
 
   socket.on("sendPlayerStatusUpdate", (room, playerStatus) => {
     if (!room || room === "") return;
-    if (!rooms.room || !rooms.room.queue) {
-      rooms.room = {};
-      rooms.room.playerStatus = {};
+    if (!rooms[room] || !rooms[room].queue) {
+      rooms[room] = {};
+      rooms[room].playerStatus = {};
     }
     playerStatus.eventTime = new Date().getTime();
-    rooms.room.playerStatus = playerStatus;
+    rooms[room].playerStatus = playerStatus;
     socket.to(room).emit("playerStatusUpdate", playerStatus);
   });
 
   socket.on("sendVideoUpdate", (room, videoObj) => {
     if (!room || !videoObj) return;
-    if (!rooms.room || !rooms.room.queue) {
-      rooms.room = {};
-      rooms.room.queue = [];
+    if (!rooms[room] || !rooms[room].queue) {
+      rooms[room] = {};
+      rooms[room].queue = [];
     }
     const uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
-    rooms.room.queue.push({ ...{ uid }, ...videoObj });
-    io.to(room).emit("updateQueue", rooms.room.queue);
+    rooms[room].queue.push({ ...{ uid }, ...videoObj });
+    io.to(room).emit("updateQueue", rooms[room].queue);
   });
 
   socket.on("removeVideo", (room, uid) => {
-    if (!room || !uid || !rooms || !rooms.room || !rooms.room.queue) return;
-    rooms.room.queue.forEach((video, index) => {
-      if (video.uid === uid) rooms.room.queue.splice(index, 1);
+    if (!room || !uid || !rooms || !rooms[room] || !rooms[room].queue) return;
+    rooms[room].queue.forEach((video, index) => {
+      if (video.uid === uid) rooms[room].queue.splice(index, 1);
     });
-    io.to(room).emit("updateQueue", rooms.room.queue);
+    io.to(room).emit("updateQueue", rooms[room].queue);
   });
 
   socket.on("pushVideo", (room, uid) => {
-    if (!room || !uid || !rooms || !rooms.room || !rooms.room.queue) return;
-    rooms.room.queue.forEach((video, index) => {
-      if (video.uid === uid) rooms.room.queue.move2(index, 0);
+    if (!room || !uid || !rooms || !rooms[room] || !rooms[room].queue) return;
+    rooms[room].queue.forEach((video, index) => {
+      if (video.uid === uid) rooms[room].queue.move2(index, 0);
     });
-    io.to(room).emit("updateQueue", rooms.room.queue);
+    io.to(room).emit("updateQueue", rooms[room].queue);
   });
 
   socket.on("getQueue", (room) => {
-    if (!room || !rooms || !rooms.room) return;
-    io.to(socket).emit("updateQueue", rooms.room.queue);
+    if (!room || !rooms || !rooms[room]) return;
+    io.to(socket).emit("updateQueue", rooms[room].queue);
   });
 
   socket.on("getPlayerStatus", (room) => {
     console.log("getPlayerStatus", room);
-    if (!room || !rooms || !rooms.room || !rooms.room.playerStatus) return;
-    let playerStatus = rooms.room.playerStatus;
+    if (!room || !rooms || !rooms[room] || !rooms[room].playerStatus) return;
+    let playerStatus = rooms[room].playerStatus;
     if (playerStatus.status === "play") {
-      const timeElapsed = (new Date().getTime() - rooms.room.playerStatus.eventTime) / 1000;
+      const timeElapsed = (new Date().getTime() - rooms[room].playerStatus.eventTime) / 1000;
       playerStatus.currentTime += timeElapsed;
     }
     socket.emit("playerStatusUpdate", playerStatus);

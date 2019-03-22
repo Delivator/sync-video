@@ -65,7 +65,7 @@
                 </v-text-field>
                 <input type="submit" class="hide">
               </v-form>
-              <v-form>
+              <v-form @submit="changeEmail">
                 <v-text-field
                   :rules="[rules.email]"
                   v-model="email"
@@ -142,14 +142,15 @@ export default {
   methods: {
     reauthenticateAndChangeEmail(event) {
       if (event) event.preventDefault();
-      firebase
-        .auth()
-        .EmailAuthProvider(this.loginEmail, this.loginPassword)
-        .then(cred => {
-          this.currentUser
-            .reauthenticateAndRetrieveDataWithCredential(cred)
-            .then(() => this.changeEmail())
-            .catch(e => this.alertBox.send("error", e.message, 10000));
+      const cred = firebase.auth.EmailAuthProvider.credential(
+        this.loginEmail,
+        this.loginPassword
+      );
+      this.currentUser
+        .reauthenticateAndRetrieveDataWithCredential(cred)
+        .then(() => {
+          this.dialog = false;
+          this.changeEmail();
         })
         .catch(e => this.alertBox.send("error", e.message, 10000));
     },

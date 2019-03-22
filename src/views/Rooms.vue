@@ -1,5 +1,5 @@
 <template>
-  <v-container>
+  <v-container fill-height>
     <v-dialog v-model="dialog" max-width="600px">
       <v-form @submit="addRoom">
         <v-card>
@@ -35,7 +35,12 @@
         </v-card>
       </v-form>
     </v-dialog>
-    <v-layout justify-center text-xs-center>
+    <v-layout v-if="loading" align-center justify-center row text-xs-center>
+      <v-flex xs12>
+        <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+      </v-flex>
+    </v-layout>
+    <v-layout v-else justify-center text-xs-center>
       <v-flex xs12 md8>
         <div v-if="currentUser">
           <div v-if="rooms">
@@ -52,7 +57,7 @@
         </div>
         <div v-else>
           <h4 class="display-1">You have to be logged in to create rooms.</h4>
-          <v-btn to="/" outline>Go back</v-btn>
+          <v-btn to="/login" outline>Login</v-btn>
         </div>
       </v-flex>
     </v-layout>
@@ -79,6 +84,7 @@ export default {
       path: "",
       dbListener: null,
       isPublic: false,
+      loading: true,
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters",
@@ -99,9 +105,13 @@ export default {
           .get()
           .then(querySnapshot => {
             if (!querySnapshot.empty) this.rooms = querySnapshot.docs;
+            this.loading = false;
             return querySnapshot.docs;
           })
-          .catch(e => this.alertBox.send("error", e.message, 10000));
+          .catch(e => {
+            this.alertBox.send("error", e.message, 10000);
+            this.loading = false;
+          });
     },
     addRoom(event) {
       if (event) event.preventDefault();
@@ -154,7 +164,10 @@ export default {
           .where("owner", "==", this.currentUser.uid)
           .onSnapshot(documentSnapshot => {
             if (!documentSnapshot.empty) this.rooms = documentSnapshot.docs;
+            this.loading = false;
           });
+    } else {
+      this.loading = false;
     }
   },
   computed: {

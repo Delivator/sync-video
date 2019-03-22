@@ -48,7 +48,12 @@
         </v-form>
       </v-dialog>
     </template>
-    <v-layout text-xs-center justify-center align-center wrap row>
+    <v-layout v-if="loading" align-center justify-center row text-xs-center>
+      <v-flex xs12>
+        <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+      </v-flex>
+    </v-layout>
+    <v-layout v-else text-xs-center justify-center align-center wrap row>
       <v-flex
         v-if="roomData"
         :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl8'"
@@ -135,9 +140,12 @@
             <v-toolbar-title>Playlist</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <v-text-field label="YouTube URL" v-model="youtubeSearch">
-              <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
-            </v-text-field>
+            <v-form @submit="addVideo">
+              <v-text-field label="YouTube URL" v-model="youtubeSearch">
+                <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
+              </v-text-field>
+              <input type="submit" class="hide">
+            </v-form>
             <div v-if="queue && queue.length > 0">
               <v-list>
                 <v-list-tile v-for="video in queue" :key="video.uid" avatar>
@@ -203,6 +211,7 @@ export default {
       preventPlayerEvents: true,
       youtubeSearch: "",
       queue: [],
+      loading: true,
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -278,6 +287,7 @@ export default {
       e.preventDefault();
     },
     playerReady() {
+      // let oldTime = 0.0;
       setTimeout(() => {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
@@ -287,6 +297,13 @@ export default {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
       }, 1500);
+      // setInterval(() => {
+      //   if (!this.$refs.youtube.player) return;
+      //   this.$refs.youtube.player.getCurrentTime().then(time => {
+      //     if (time < oldTime - 1 || time > oldTime + 1) this.onSeek();
+      //     oldTime = time;
+      //   });
+      // }, 250);
     },
     onPlay() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
@@ -319,12 +336,12 @@ export default {
     onEnded() {
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
-        console.log("removing", this.queue[0].uid, "from", this.roomID);
         if (this.socket && this.socket.connected)
           this.socket.emit("removeVideo", this.roomID, this.queue[0].uid);
       }
     },
-    addVideo() {
+    addVideo(event) {
+      if (event) event.preventDefault();
       const ytId = this.$youtube.getIdFromUrl(this.youtubeSearch);
       if (!ytId) return;
       if (this.socket && this.socket.connected)
@@ -343,6 +360,19 @@ export default {
     },
     youtubeOnError(e) {
       if (e) console.log("youtubeOnError", e);
+    },
+    onSeek() {
+      console.log("onSeek");
+      if (!this.$refs.youtube || !this.socket || !this.socket.connected) return;
+      this.$refs.youtube.player.getCurrentTime().then(time => {
+        this.$refs.youtube.player.getPlayerState().then(state => {
+          console.log("time", time, "state", state);
+        });
+        // this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
+        //   status: "play",
+        //   currentTime: time
+        // });
+      });
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -352,28 +382,45 @@ export default {
     next();
   },
   mounted() {
+    let roomHistory = [];
     this.db = firebase.firestore();
-    if (this.db)
+    if (this.db) {
       this.db
         .collection("rooms")
         .doc(this.roomID)
         .get()
         .then(querySnapshot => {
+          this.loading = false;
           if (querySnapshot.exists) {
             this.roomData = querySnapshot.data();
             this.title = this.roomData.title;
             this.path = querySnapshot.id;
             this.isPublic = this.roomData.public;
+
+            if (!localStorage.roomHistory) {
+              localStorage.roomHistory = JSON.stringify(roomHistory);
+            }
+            roomHistory = JSON.parse(localStorage.roomHistory);
+            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+            roomHistory.unshift({
+              id: this.roomID,
+              title: this.roomData.title
+            });
+            if (roomHistory.length > 5) roomHistory.pop();
+            localStorage.roomHistory = JSON.stringify(roomHistory);
           }
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
-    if (this.db)
+        .catch(e => {
+          this.alertBox.send("error", e.message, 10000);
+          this.loading = false;
+        });
       this.db
         .collection("rooms")
         .doc(this.roomID)
         .onSnapshot(documentSnapshot => {
           this.roomData = documentSnapshot.data();
         });
+    }
     if (this.roomID) {
       setTimeout(() => {
         if (this.socket) {
@@ -392,7 +439,6 @@ export default {
             if (users) this.users = users;
           });
           this.socket.on("playerStatusUpdate", playerStatus => {
-            console.log("playerStatusUpdate", playerStatus);
             if (playerStatus.status === "pause") {
               this.preventPlayerEvents = true;
               this.$refs.youtube.player.pauseVideo();
@@ -415,6 +461,7 @@ export default {
               this.playerData.videoSource = queue[0].videoSource || "";
               this.playerData.videoId = queue[0].videoId || "x";
             } else {
+              document.exitFullscreen();
               this.playerData.videoSource = "";
               this.playerData.videoId = "x";
             }

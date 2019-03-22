@@ -5,7 +5,7 @@
         <v-img :src="require('../assets/logo.svg')" class="my-3" contain height="150"></v-img>
       </v-flex>
 
-      <v-flex mb-4>
+      <v-flex xs12 offset-xs0 md8 offset-md2>
         <h1 class="display-2 font-weight-bold mb-3" v-if="currentUser">
           Welcome back,
           <span
@@ -13,6 +13,13 @@
           >{{ currentUser.displayName || currentUser.email || "Guest" }}</span>.
         </h1>
         <h1 class="display-2 font-weight-bold mb-3" v-else>Welcome to Sync Video!</h1>
+        <v-divider id="rooms-divider" v-if="roomHistory && roomHistory.length > 0"></v-divider>
+        <div v-if="roomHistory && roomHistory.length > 0">
+          <h4 class="display-1">Recent rooms:</h4>
+          <template v-for="room in roomHistory">
+            <v-btn :key="room.id" :to="`/r/${room.id}`">{{room.title}}</v-btn>
+          </template>
+        </div>
         <p
           class="subheading font-weight-regular"
           v-if="showVerify && currentUser && currentUser.email && !currentUser.emailVerified"
@@ -30,7 +37,8 @@ export default {
   props: ["alertBox", "currentUser"],
   data() {
     return {
-      showVerify: true
+      showVerify: true,
+      roomHistory: []
     };
   },
   methods: {
@@ -49,6 +57,14 @@ export default {
           .catch(e => this.alertBox.send("error", e.message, 10000));
       }
     }
+  },
+  mounted() {
+    if (localStorage.roomHistory)
+      this.roomHistory = JSON.parse(localStorage.roomHistory);
+    window.addEventListener("storage", event => {
+      if (event.key === "roomHistory")
+        this.roomHistory = JSON.parse(localStorage.roomHistory);
+    });
   }
 };
 </script>
