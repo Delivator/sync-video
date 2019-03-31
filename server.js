@@ -51,10 +51,12 @@ function getRoomUsers(room) {
   if (room in rooms) {
     const sockets = rooms[room].sockets;
     for (const sock in sockets) {
+      const socket2 = io.sockets.connected[sock];
       if (sock in io.sockets.connected)
         users.push({
-          displayName: io.sockets.connected[sock].displayName,
-          avatar: io.sockets.connected[sock].avatar || null
+          displayName: socket2.displayName,
+          avatar: socket2.avatar || null,
+          id: socket2.id
         });
     }
   }

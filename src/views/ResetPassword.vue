@@ -128,9 +128,9 @@ export default {
           this.currentUser
             .reauthenticateAndRetrieveDataWithCredential(cred)
             .then(() => this.changePassword())
-            .catch(e => this.alertBox.send("error", e.message, 10000));
+            .catch(e => this.alertBox.send("error", e, 10000));
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     confirm(event) {
       if (event) event.preventDefault();
@@ -148,7 +148,7 @@ export default {
           );
           this.$router.replace("/login");
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     changePassword(event) {
       if (event) event.preventDefault();
@@ -161,7 +161,7 @@ export default {
         .then(() => this.alertBox.send("success", "Password changed"))
         .catch(e => {
           if (e.code === "auth/requires-recent-login") this.dialog = true;
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     }
   },

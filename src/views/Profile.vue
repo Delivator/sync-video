@@ -91,7 +91,7 @@
             </div>
           </v-card-text>
           <v-card-actions>
-            <v-btn v-if="!currentUser" to="/" outline>Go Back</v-btn>
+            <v-btn v-if="!currentUser" to="/login" outline>Login</v-btn>
             <v-spacer></v-spacer>
             <v-btn v-if="currentUser" to="/reset-password">Change Password</v-btn>
           </v-card-actions>
@@ -152,7 +152,7 @@ export default {
           this.dialog = false;
           this.changeEmail();
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     changeEmail(event) {
       if (event) event.preventDefault();
@@ -162,7 +162,7 @@ export default {
         .then(() => this.alertBox.send("success", "E-mail address changed"))
         .catch(e => {
           if (e.code === "auth/requires-recent-login") this.dialog = true;
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     },
     changeDisplayName(event) {
@@ -178,7 +178,7 @@ export default {
           this.currentUser = firebase.auth().currentUser;
           this.checkDisplayNameInput();
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     checkEmailInput() {
       setTimeout(() => {

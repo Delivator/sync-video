@@ -48,7 +48,7 @@
             <template v-for="room in rooms">
               <v-btn :key="room.id" :to="`/r/${room.id}`">{{room.data().title}}</v-btn>
             </template>
-            <v-divider id="rooms-divider"></v-divider>
+            <v-divider class="divider-margin"></v-divider>
           </div>
           <div v-else>
             <h4 class="display-1">You don't have any rooms yet, click here to create one.</h4>
@@ -109,7 +109,7 @@ export default {
             return querySnapshot.docs;
           })
           .catch(e => {
-            this.alertBox.send("error", e.message, 10000);
+            this.alertBox.send("error", e, 10000);
             this.loading = false;
           });
     },
@@ -133,7 +133,7 @@ export default {
           this.alertBox.send("success", "Room created", 3000);
           this.$router.push(`/r/${this.path}`);
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     generateRoomPath(input) {
       if (!input || !typeof input === "string" || input.length < 1) return "";

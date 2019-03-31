@@ -1,4 +1,4 @@
-.v-toolbar__title a {
+.v-toolbar__title a, .no-link-deko {
   text-decoration: none;
 }
 
@@ -26,7 +26,7 @@
   transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
 }
 
-#rooms-divider {
+.divider-margin {
   margin: 1rem 0;
 }
 

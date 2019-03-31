@@ -13,7 +13,7 @@
           >{{ currentUser.displayName || currentUser.email || "Guest" }}</span>.
         </h1>
         <h1 class="display-2 font-weight-bold mb-3" v-else>Welcome to Sync Video!</h1>
-        <v-divider id="rooms-divider" v-if="roomHistory && roomHistory.length > 0"></v-divider>
+        <v-divider class="divider-margin" v-if="roomHistory && roomHistory.length > 0"></v-divider>
         <div v-if="roomHistory && roomHistory.length > 0">
           <h4 class="display-1">Recent rooms:</h4>
           <template v-for="room in roomHistory">
@@ -54,7 +54,7 @@ export default {
             this.alertBox.send("success", "Verification email send");
             this.showVerify = false;
           })
-          .catch(e => this.alertBox.send("error", e.message, 10000));
+          .catch(e => this.alertBox.send("error", e, 10000));
       }
     }
   },

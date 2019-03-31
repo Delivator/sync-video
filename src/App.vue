@@ -63,7 +63,7 @@
         transition="slide-y-transition"
         class="alert"
       >{{ alertBox.text }}</v-alert>
-      <router-view :alertBox="alertBox" :currentUser="currentUser" :socket="socket"/>
+      <router-view :alertBox="alertBox" :currentUser="currentUser" :socket="socket" :darkMode="darkMode"/>
     </v-content>
   </v-app>
 </template>
@@ -91,6 +91,12 @@ export default {
           if (!timeout || isNaN(timeout) || timeout < 1) timeout = 7500;
           if (!message || message === "") message = "Unknown error";
           if (!type || !/success|info|warning|error/.test(type)) type = "info";
+          if (type === "error") {
+            if (message instanceof Error) {
+              console.error(message);
+              message = message.message;
+            }
+          }
           this.alertBox.show = true;
           this.alertBox.type = type;
           this.alertBox.text = message;
@@ -119,7 +125,7 @@ export default {
           this.alertBox.send("info", "Logged out", 3000);
         })
         .catch(e => {
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     },
     getGravatarUrl: function(email, size) {
@@ -148,7 +154,7 @@ export default {
           .then(token => {
             this.socket.emit("authenticate", token);
           })
-          .catch(e => this.alertBox.send("error", e.message, 10000));
+          .catch(e => this.alertBox.send("error", e, 10000));
       }
     });
 
@@ -162,7 +168,7 @@ export default {
             }
           });
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     } else {
       this.socket = io(settings.socketUrl);
     }
@@ -184,7 +190,7 @@ export default {
             })
             .catch(e => {
               this.$router.replace("/");
-              this.alertBox.send("error", e.message, 10000);
+              this.alertBox.send("error", e, 10000);
             });
           break;
         case "recoverEmail":
@@ -197,7 +203,7 @@ export default {
                 this.alertBox.send("success", "Email address recovered", 3000);
               });
             })
-            .catch(e => this.alertBox.send("error", e.message, 10000));
+            .catch(e => this.alertBox.send("error", e, 10000));
           this.$router.replace("/");
           break;
         case "verifyEmail":
@@ -208,7 +214,7 @@ export default {
                 firebase.auth().currentUser.reload();
               this.alertBox.send("success", "Email address verified", 3000);
             })
-            .catch(e => this.alertBox.send("error", e.message, 10000));
+            .catch(e => this.alertBox.send("error", e, 10000));
           this.$router.replace("/");
           break;
         default:

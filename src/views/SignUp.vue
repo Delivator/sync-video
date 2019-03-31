@@ -96,12 +96,12 @@ export default {
           if (this.displayName && this.displayName !== "")
             user.user
               .updateProfile({ displayName: this.displayName })
-              .catch(e => this.alertBox.send("error", e.message, 10000));
+              .catch(e => this.alertBox.send("error", e, 10000));
           this.$router.replace("/");
           this.alertBox.send("success", `Account for ${user.user.email} created`);
         })
         .catch(e => {
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     },
     generateUsername() {

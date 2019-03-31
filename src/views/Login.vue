@@ -89,7 +89,7 @@ export default {
         })
         .catch(e => {
           this.loading = false;
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     },
     resetPassword: function() {
@@ -108,7 +108,7 @@ export default {
         })
         .catch(e => {
           this.loading = false;
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
         });
     }
   }

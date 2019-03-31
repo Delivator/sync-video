@@ -120,7 +120,11 @@
           </v-toolbar>
           <v-card-text>
             <div v-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
-              <v-chip v-for="user in users" :key="user.displayName">
+              <v-chip
+                v-for="user in users"
+                :key="user.displayName"
+                :color="user.isMe ? 'primary' : ''"
+              >
                 <v-avatar v-if="user.avatar">
                   <img :src="user.avatar" alt="Avatar">
                 </v-avatar>
@@ -141,22 +145,89 @@
           </v-toolbar>
           <v-card-text>
             <v-form @submit="addVideo">
-              <v-text-field label="YouTube URL" v-model="youtubeSearch">
+              <v-text-field
+                label="YouTube search or URL"
+                @input="searchVideo"
+                @focusin="showResults = true"
+                @focusout="searchHover ? (showResults = true) : (showResults = false)"
+                v-model="youtubeSearch"
+                clearable
+              >
+                <template v-slot:prepend>
+                  <v-tooltip bottom>
+                    <template v-slot:activator="{ on }">
+                      <v-icon
+                        :class="showResults ? '' : 'hide'"
+                        @click="showResults = false"
+                        v-on="on"
+                      >list</v-icon>
+                    </template>
+                    Back to playlist
+                  </v-tooltip>
+                </template>
                 <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
               </v-text-field>
               <input type="submit" class="hide">
             </v-form>
-            <div v-if="queue && queue.length > 0">
-              <v-list>
-                <v-list-tile v-for="video in queue" :key="video.uid" avatar>
+            <div
+              v-if="queue && queue.length > 0 || showResults && searchResults.length > 0"
+              @mouseenter="searchHover = true"
+              @mouseleave="listMouseLeave"
+            >
+              <v-list two-line v-if="showResults && searchResults.length > 0">
+                <v-list-tile
+                  v-for="video in searchResults"
+                  :key="video.id.videoId"
+                  @click="(() => { return; })"
+                >
                   <img
-                    :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                    :v-lazy="`https://img.youtube.com/vi/${video.id.videoId}/mqdefault.jpg`"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
                   >
                   <v-list-tile-content>
-                    <v-list-tile-title>https://www.youtube.com/watch?v={{video.videoId}}</v-list-tile-title>
+                    <v-list-tile-title>
+                      <a
+                        :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                        :href="`https://www.youtube.com/watch?v=${video.id.videoId}`"
+                        target="_blank"
+                      >
+                        {{parseYoutubeTitle(video.snippet.title)}}
+                        <v-icon small>open_in_new</v-icon>
+                      </a>
+                    </v-list-tile-title>
+                    <v-list-tile-sub-title>
+                      <span class="text--primary">{{video.snippet.channelTitle}}</span>
+                      &mdash; {{video.snippet.description}}
+                    </v-list-tile-sub-title>
+                  </v-list-tile-content>
+                  <v-spacer></v-spacer>
+                  <v-icon
+                    @click="addVideo(null, video.id.videoId, parseYoutubeTitle(video.snippet.title))"
+                    color="success"
+                  >play_arrow</v-icon>
+                </v-list-tile>
+              </v-list>
+              <v-list v-else>
+                <v-list-tile v-for="video in queue" :key="video.uid" avatar>
+                  <img
+                    :v-lazy="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                    height="50"
+                    width="88.889"
+                    class="playlist-thumbnail"
+                  >
+                  <v-list-tile-content>
+                    <v-list-tile-title>
+                      <a
+                        :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                        :href="`https://www.youtube.com/watch?v=${video.videoId}`"
+                        target="_blank"
+                      >
+                        {{video.title}}
+                        <v-icon small>open_in_new</v-icon>
+                      </a>
+                    </v-list-tile-title>
                   </v-list-tile-content>
                   <v-spacer></v-spacer>
                   <v-icon @click="pushVideo(video.uid)" color="success">play_arrow</v-icon>
@@ -186,9 +257,16 @@
 <script>
 import firebase from "firebase/app";
 import "firebase/firestore";
+import YouTube from "youtube-node";
+import settings from "../settings.json";
+
+const youTube = new YouTube();
+let searchTimeout = null;
+
+youTube.setKey(settings.youTubeAPIKey);
 
 export default {
-  props: ["alertBox", "currentUser", "socket"],
+  props: ["alertBox", "currentUser", "socket", "darkMode"],
   data() {
     return {
       roomID: this.$route.params.id || null,
@@ -203,7 +281,7 @@ export default {
       },
       playerData: {
         videoSource: "",
-        videoId: ""
+        videoId: "null"
       },
       dbListener: null,
       theatre: false,
@@ -212,6 +290,9 @@ export default {
       youtubeSearch: "",
       queue: [],
       loading: true,
+      searchResults: [],
+      showResults: false,
+      searchHover: false,
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -242,7 +323,7 @@ export default {
           this.alertBox.send("success", "Room updated", 3000);
           this.$router.push(`/r/${this.path}`);
         })
-        .catch(e => this.alertBox.send("error", e.message, 10000));
+        .catch(e => this.alertBox.send("error", e, 10000));
     },
     deleteRoom(event) {
       if (event) event.preventDefault();
@@ -255,7 +336,7 @@ export default {
             this.alertBox.send("success", "Room deleted");
             this.$router.replace("/");
           })
-          .catch(e => this.alertBox.send("error", e.message, 10000));
+          .catch(e => this.alertBox.send("error", e, 10000));
       return;
     },
     playVideo() {
@@ -307,6 +388,7 @@ export default {
     },
     onPlay() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
         this.$refs.youtube.player.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -318,6 +400,7 @@ export default {
     },
     onPause() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
         this.$refs.youtube.player.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -334,28 +417,54 @@ export default {
       console.log("onCued");
     },
     onEnded() {
+      if (
+        this.queue.length > 1 &&
+        this.playerData.videoId === this.queue[1].videoId
+      ) {
+        console.log("next vid the same");
+        this.preventPlayerEvents = true;
+        this.$refs.youtube.player.seekTo(0);
+      }
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
           this.socket.emit("removeVideo", this.roomID, this.queue[0].uid);
       }
     },
-    addVideo(event) {
+    addVideo(event, videoId, title) {
       if (event) event.preventDefault();
-      const ytId = this.$youtube.getIdFromUrl(this.youtubeSearch);
-      if (!ytId) return;
-      if (this.socket && this.socket.connected)
-        this.socket.emit("sendVideoUpdate", this.roomID, {
-          videoSource: "youtube",
-          videoId: ytId
+      if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
+      if (!videoId) return;
+
+      const sendUpdate = () => {
+        if (this.socket && this.socket.connected)
+          this.socket.emit("sendVideoUpdate", this.roomID, {
+            videoSource: "youtube",
+            videoId: videoId,
+            title
+          });
+      };
+
+      if (title) {
+        sendUpdate();
+      } else {
+        youTube.getById(videoId, (error, result) => {
+          if (error) return console.error(error);
+          if (result.pageInfo.totalResults > 0) {
+            title = this.parseYoutubeTitle(result.items[0].snippet.title);
+          } else {
+            title = "YouTube Video";
+          }
+          sendUpdate();
         });
+      }
     },
     removeVideo(uid) {
-      if ((!!uid, this.socket && this.socket.connected))
+      if (!!uid && this.socket && this.socket.connected)
         this.socket.emit("removeVideo", this.roomID, uid);
     },
     pushVideo(uid) {
-      if ((!!uid, this.socket && this.socket.connected))
+      if (!!uid && this.socket && this.socket.connected)
         this.socket.emit("pushVideo", this.roomID, uid);
     },
     youtubeOnError(e) {
@@ -373,6 +482,34 @@ export default {
         //   currentTime: time
         // });
       });
+    },
+    searchVideo() {
+      if (this.youtubeSearch === "" || this.youtubeSearch.length < 1) return;
+      if (searchTimeout !== null) {
+        clearTimeout(searchTimeout);
+      }
+      searchTimeout = setTimeout(() => {
+        youTube.search(
+          this.youtubeSearch,
+          10,
+          { type: "video", part: "snippet" },
+          (error, results) => {
+            if (error) return console.error(error);
+            this.searchResults = results.items;
+          }
+        );
+      }, 333);
+    },
+    listMouseLeave() {
+      this.searchHover = false;
+    },
+    parseYoutubeTitle(title) {
+      if (!title) return;
+      const parser = new DOMParser();
+      return parser.parseFromString(
+        "<!doctype HTML><body>" + title,
+        "text/html"
+      ).body.textContent;
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -411,7 +548,7 @@ export default {
           }
         })
         .catch(e => {
-          this.alertBox.send("error", e.message, 10000);
+          this.alertBox.send("error", e, 10000);
           this.loading = false;
         });
       this.db
@@ -432,11 +569,22 @@ export default {
                 .then(token => {
                   this.socket.emit("authenticate", token);
                 })
-                .catch(e => this.alertBox.send("error", e.message, 10000));
+                .catch(e => this.alertBox.send("error", e, 10000));
             }
           });
           this.socket.on("roomUsersUpdate", users => {
-            if (users) this.users = users;
+            if (users) {
+              users.forEach((user, index) => {
+                if (user.id === this.socket.id) {
+                  const me = user;
+                  user.isMe = true;
+                  users.splice(index, 1);
+                  users.unshift(me);
+                }
+              });
+              users = [...new Set(users)];
+              this.users = users;
+            }
           });
           this.socket.on("playerStatusUpdate", playerStatus => {
             if (playerStatus.status === "pause") {
@@ -459,11 +607,11 @@ export default {
             if (queue) this.queue = queue;
             if (queue && queue.length > 0) {
               this.playerData.videoSource = queue[0].videoSource || "";
-              this.playerData.videoId = queue[0].videoId || "x";
+              this.playerData.videoId = queue[0].videoId || "null";
             } else {
-              document.exitFullscreen();
+              if (window.fullScreen) document.exitFullscreen();
               this.playerData.videoSource = "";
-              this.playerData.videoId = "x";
+              this.playerData.videoId = "null";
             }
           });
         }
