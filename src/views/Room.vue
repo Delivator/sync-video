@@ -181,7 +181,7 @@
                   @click="(() => { return; })"
                 >
                   <img
-                    :v-lazy="`https://img.youtube.com/vi/${video.id.videoId}/mqdefault.jpg`"
+                    :src="`https://img.youtube.com/vi/${video.id.videoId}/mqdefault.jpg`"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
@@ -212,7 +212,7 @@
               <v-list v-else>
                 <v-list-tile v-for="video in queue" :key="video.uid" avatar>
                   <img
-                    :v-lazy="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                    :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
