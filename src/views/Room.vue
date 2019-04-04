@@ -99,7 +99,6 @@
                 @paused="onPause"
                 @buffering="onBuffering"
                 @ended="onEnded"
-                @cued="onCued"
                 @error="youtubeOnError"
                 :player-vars="playerVars"
                 ref="youtube"
@@ -379,18 +378,76 @@ export default {
           this.socket.emit("getPlayerStatus", this.roomID);
       }, 1500);
       // setInterval(() => {
-      //   if (!this.$refs.youtube.player) return;
-      //   this.$refs.youtube.player.getCurrentTime().then(time => {
+      //   if (!this.youTubePlayer) return;
+      //   this.youTubePlayer.getCurrentTime().then(time => {
       //     if (time < oldTime - 1 || time > oldTime + 1) this.onSeek();
       //     oldTime = time;
       //   });
       // }, 250);
+      if (this.roomID) {
+        setTimeout(() => {
+          if (this.socket) {
+            this.socket.emit("joinRoom", this.roomID);
+            this.socket.on("reconnect", () => {
+              if (this.currentUser && this.socket.connected) {
+                this.currentUser
+                  .getIdToken()
+                  .then(token => {
+                    this.socket.emit("authenticate", token);
+                  })
+                  .catch(e => this.alertBox.send("error", e, 10000));
+              }
+            });
+            this.socket.on("roomUsersUpdate", users => {
+              if (users) {
+                users.forEach((user, index) => {
+                  if (user.id === this.socket.id) {
+                    const me = user;
+                    user.isMe = true;
+                    users.splice(index, 1);
+                    users.unshift(me);
+                  }
+                });
+                users = [...new Set(users)];
+                this.users = users;
+              }
+            });
+            this.socket.on("playerStatusUpdate", playerStatus => {
+              if (playerStatus.status === "pause") {
+                this.preventPlayerEvents = true;
+                this.youTubePlayer.pauseVideo();
+                this.youTubePlayer.seekTo(playerStatus.currentTime);
+              } else if (playerStatus.status === "play") {
+                this.preventPlayerEvents = true;
+                this.youTubePlayer.getCurrentTime().then(time => {
+                  if (
+                    time < playerStatus.currentTime - 1 ||
+                    time > playerStatus.currentTime
+                  )
+                    this.youTubePlayer.seekTo(playerStatus.currentTime);
+                });
+                this.youTubePlayer.playVideo();
+              }
+            });
+            this.socket.on("updateQueue", queue => {
+              if (queue) this.queue = queue;
+              if (queue && queue.length > 0) {
+                this.playerData.videoSource = queue[0].videoSource || "";
+                this.playerData.videoId = queue[0].videoId || "null";
+              } else {
+                this.playerData.videoSource = "";
+                this.playerData.videoId = "null";
+              }
+            });
+          }
+        }, 0);
+      }
     },
     onPlay() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
-        this.$refs.youtube.player.getCurrentTime().then(time => {
+        this.youTubePlayer.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
             status: "play",
             currentTime: time
@@ -402,7 +459,7 @@ export default {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
-        this.$refs.youtube.player.getCurrentTime().then(time => {
+        this.youTubePlayer.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
             status: "pause",
             currentTime: time
@@ -413,22 +470,21 @@ export default {
     onBuffering() {
       console.log("onBuffering");
     },
-    onCued() {
-      console.log("onCued");
-    },
     onEnded() {
       if (
         this.queue.length > 1 &&
         this.playerData.videoId === this.queue[1].videoId
       ) {
-        console.log("next vid the same");
         this.preventPlayerEvents = true;
-        this.$refs.youtube.player.seekTo(0);
+        this.youTubePlayer.seekTo(0);
       }
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
           this.socket.emit("removeVideo", this.roomID, this.queue[0].uid);
+      }
+      if (this.queue.length === 1) {
+        document.exitFullscreen();
       }
     },
     addVideo(event, videoId, title) {
@@ -449,11 +505,15 @@ export default {
         sendUpdate();
       } else {
         youTube.getById(videoId, (error, result) => {
-          if (error) return console.error(error);
-          if (result.pageInfo.totalResults > 0) {
-            title = this.parseYoutubeTitle(result.items[0].snippet.title);
-          } else {
+          if (error) {
+            console.error(error);
             title = "YouTube Video";
+          } else {
+            if (result.pageInfo.totalResults > 0) {
+              title = this.parseYoutubeTitle(result.items[0].snippet.title);
+            } else {
+              title = "YouTube Video";
+            }
           }
           sendUpdate();
         });
@@ -473,8 +533,8 @@ export default {
     onSeek() {
       console.log("onSeek");
       if (!this.$refs.youtube || !this.socket || !this.socket.connected) return;
-      this.$refs.youtube.player.getCurrentTime().then(time => {
-        this.$refs.youtube.player.getPlayerState().then(state => {
+      this.youTubePlayer.getCurrentTime().then(time => {
+        this.youTubePlayer.getPlayerState().then(state => {
           console.log("time", time, "state", state);
         });
         // this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -494,7 +554,7 @@ export default {
           10,
           { type: "video", part: "snippet" },
           (error, results) => {
-            if (error) return console.error(error);
+            if (error) console.error(error);
             this.searchResults = results.items;
           }
         );
@@ -557,65 +617,6 @@ export default {
         .onSnapshot(documentSnapshot => {
           this.roomData = documentSnapshot.data();
         });
-    }
-    if (this.roomID) {
-      setTimeout(() => {
-        if (this.socket) {
-          this.socket.emit("joinRoom", this.roomID);
-          this.socket.on("reconnect", () => {
-            if (this.currentUser && this.socket.connected) {
-              this.currentUser
-                .getIdToken()
-                .then(token => {
-                  this.socket.emit("authenticate", token);
-                })
-                .catch(e => this.alertBox.send("error", e, 10000));
-            }
-          });
-          this.socket.on("roomUsersUpdate", users => {
-            if (users) {
-              users.forEach((user, index) => {
-                if (user.id === this.socket.id) {
-                  const me = user;
-                  user.isMe = true;
-                  users.splice(index, 1);
-                  users.unshift(me);
-                }
-              });
-              users = [...new Set(users)];
-              this.users = users;
-            }
-          });
-          this.socket.on("playerStatusUpdate", playerStatus => {
-            if (playerStatus.status === "pause") {
-              this.preventPlayerEvents = true;
-              this.$refs.youtube.player.pauseVideo();
-              this.$refs.youtube.player.seekTo(playerStatus.currentTime);
-            } else if (playerStatus.status === "play") {
-              this.preventPlayerEvents = true;
-              this.$refs.youtube.player.getCurrentTime().then(time => {
-                if (
-                  time < playerStatus.currentTime - 1 ||
-                  time > playerStatus.currentTime
-                )
-                  this.$refs.youtube.player.seekTo(playerStatus.currentTime);
-              });
-              this.$refs.youtube.player.playVideo();
-            }
-          });
-          this.socket.on("updateQueue", queue => {
-            if (queue) this.queue = queue;
-            if (queue && queue.length > 0) {
-              this.playerData.videoSource = queue[0].videoSource || "";
-              this.playerData.videoId = queue[0].videoId || "null";
-            } else {
-              if (window.fullScreen) document.exitFullscreen();
-              this.playerData.videoSource = "";
-              this.playerData.videoId = "null";
-            }
-          });
-        }
-      }, 0);
     }
   }
 };
