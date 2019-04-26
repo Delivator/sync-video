@@ -292,6 +292,7 @@ export default {
       searchResults: [],
       showResults: false,
       searchHover: false,
+      playerStatus: {status: "play"},
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -338,9 +339,6 @@ export default {
           .catch(e => this.alertBox.send("error", e, 10000));
       return;
     },
-    playVideo() {
-      this.youTubePlayer.playVideo();
-    },
     toggleTheatre() {
       this.theatre = !this.theatre;
       if (this.theatre) {
@@ -367,7 +365,7 @@ export default {
       e.preventDefault();
     },
     playerReady() {
-      // let oldTime = 0.0;
+      let oldTime = 0.0;
       setTimeout(() => {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
@@ -377,13 +375,15 @@ export default {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
       }, 1500);
-      // setInterval(() => {
-      //   if (!this.youTubePlayer) return;
-      //   this.youTubePlayer.getCurrentTime().then(time => {
-      //     if (time < oldTime - 1 || time > oldTime + 1) this.onSeek();
-      //     oldTime = time;
-      //   });
-      // }, 250);
+      setInterval(() => {
+        if (!this.youTubePlayer) return;
+        this.youTubePlayer.getCurrentTime().then(time => {
+          if (time < oldTime - 0.5 || time > oldTime + 0.5) {
+            this.onSeek();
+          }
+          oldTime = time;
+        });
+      }, 75);
       if (this.roomID) {
         setTimeout(() => {
           if (this.socket) {
@@ -413,6 +413,7 @@ export default {
               }
             });
             this.socket.on("playerStatusUpdate", playerStatus => {
+              if (playerStatus && playerStatus.status) this.playerStatus.status = playerStatus.status;
               if (playerStatus.status === "pause") {
                 this.preventPlayerEvents = true;
                 this.youTubePlayer.pauseVideo();
@@ -444,7 +445,9 @@ export default {
       }
     },
     onPlay() {
+      this.playerStatus.status = "play";
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      console.log("onPlay");
       if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
         this.youTubePlayer.getCurrentTime().then(time => {
@@ -456,6 +459,7 @@ export default {
       }
     },
     onPause() {
+      this.playerStatus.status = "pause";
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
       if (this.roomID && this.socket) {
@@ -531,17 +535,13 @@ export default {
       if (e) console.log("youtubeOnError", e);
     },
     onSeek() {
-      console.log("onSeek");
-      if (!this.$refs.youtube || !this.socket || !this.socket.connected) return;
-      this.youTubePlayer.getCurrentTime().then(time => {
-        this.youTubePlayer.getPlayerState().then(state => {
-          console.log("time", time, "state", state);
-        });
-        // this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
-        //   status: "play",
-        //   currentTime: time
-        // });
-      });
+      if (!this.youTubePlayer || !this.socket || !this.socket.connected) return;
+      // this.youTubePlayer.getCurrentTime().then(time => {
+      //   this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
+      //     status: this.playerStatus.status,
+      //     currentTime: time
+      //   });
+      // });
     },
     searchVideo() {
       if (this.youtubeSearch === "" || this.youtubeSearch.length < 1) return;

@@ -12,26 +12,26 @@
     "connect-history-api-fallback": "^1.6.0",
     "crypto-js": "^3.1.9-1",
     "express": "^4.16.4",
-    "firebase": "^5.9.2",
-    "firebase-admin": "^7.2.0",
+    "firebase": "^5.10.1",
+    "firebase-admin": "^7.3.0",
     "socket.io": "^2.2.0",
     "vue": "^2.6.10",
-    "vue-router": "^3.0.2",
+    "vue-router": "^3.0.6",
     "vue-youtube": "^1.3.4",
-    "vuetify": "^1.5.7",
+    "vuetify": "^1.5.13",
     "youtube-node": "^1.3.3"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^3.5.3",
-    "@vue/cli-plugin-eslint": "^3.5.1",
-    "@vue/cli-service": "^3.5.3",
+    "@vue/cli-plugin-babel": "^3.6.0",
+    "@vue/cli-plugin-eslint": "^3.6.0",
+    "@vue/cli-service": "^3.6.0",
     "babel-eslint": "^10.0.1",
-    "eslint": "^5.15.3",
+    "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.2.2",
     "stylus": "^0.54.5",
     "stylus-loader": "^3.0.2",
     "vue-cli-plugin-vuetify": "^0.5.0",
     "vue-template-compiler": "^2.6.10",
-    "vuetify-loader": "^1.2.1"
+    "vuetify-loader": "^1.2.2"
   }
 }
