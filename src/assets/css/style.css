@@ -1,3 +1,7 @@
+html {
+  overflow-y: auto;
+}
+
 .v-toolbar__title a, .no-link-deko {
   text-decoration: none;
 }

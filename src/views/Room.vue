@@ -85,7 +85,7 @@
           </v-toolbar>
           <v-card-text ref="player">
             <v-responsive :aspect-ratio="16/9" max-height="100vh">
-              <v-container v-if="!queue || queue.length < 1" fluid fill-height>
+              <v-container v-if="queue.length < 1" fluid fill-height>
                 <v-layout align-center justify-center>
                   <v-flex xs12>
                     <h1>No videos in queue</h1>
@@ -147,8 +147,8 @@
               <v-text-field
                 label="YouTube search or URL"
                 @input="searchVideo"
-                @focusin="showResults = true"
-                @focusout="searchHover ? (showResults = true) : (showResults = false)"
+                @focusin="showSearchResults = true"
+                @focusout="searchHover ? (showSearchResults = true) : (showSearchResults = false)"
                 v-model="youtubeSearch"
                 clearable
               >
@@ -156,8 +156,8 @@
                   <v-tooltip bottom>
                     <template v-slot:activator="{ on }">
                       <v-icon
-                        :class="showResults ? '' : 'hide'"
-                        @click="showResults = false"
+                        :class="showSearchResults ? '' : 'hide'"
+                        @click="showSearchResults = false"
                         v-on="on"
                       >list</v-icon>
                     </template>
@@ -169,15 +169,16 @@
               <input type="submit" class="hide">
             </v-form>
             <div
-              v-if="queue && queue.length > 0 || showResults && searchResults.length > 0"
+              v-if="queue.length > 0 || showSearchResults && searchResults.length > 0"
               @mouseenter="searchHover = true"
               @mouseleave="listMouseLeave"
             >
-              <v-list two-line v-if="showResults && searchResults.length > 0">
+              <h6 class="title" v-if="showSearchResults && searchResults.length > 0">Search results:</h6>
+              <v-list two-line v-if="showSearchResults && searchResults.length > 0">
                 <v-list-tile
                   v-for="video in searchResults"
                   :key="video.id.videoId"
-                  @click="(() => { return; })"
+                  @click="void(0)"
                 >
                   <img
                     :src="`https://img.youtube.com/vi/${video.id.videoId}/mqdefault.jpg`"
@@ -201,11 +202,15 @@
                       &mdash; {{video.snippet.description}}
                     </v-list-tile-sub-title>
                   </v-list-tile-content>
-                  <v-spacer></v-spacer>
-                  <v-icon
-                    @click="addVideo(null, video.id.videoId, parseYoutubeTitle(video.snippet.title))"
-                    color="success"
-                  >play_arrow</v-icon>
+                  <v-list-tile-action>
+                    <v-btn
+                      icon
+                      ripple
+                      @click="addVideo(null, video.id.videoId, parseYoutubeTitle(video.snippet.title))"
+                    >
+                      <v-icon>playlist_add</v-icon>
+                    </v-btn>
+                  </v-list-tile-action>
                 </v-list-tile>
               </v-list>
               <v-list v-else>
@@ -229,7 +234,7 @@
                     </v-list-tile-title>
                   </v-list-tile-content>
                   <v-spacer></v-spacer>
-                  <v-icon @click="pushVideo(video.uid)" color="success">play_arrow</v-icon>
+                  <v-icon @click="moveVideo(video.uid, 0)" color="success">play_arrow</v-icon>
                   <v-icon @click="removeVideo(video.uid)" color="error">close</v-icon>
                 </v-list-tile>
               </v-list>
@@ -290,8 +295,9 @@ export default {
       queue: [],
       loading: true,
       searchResults: [],
-      showResults: false,
+      showSearchResults: false,
       searchHover: false,
+      playerStatus: { status: "play" },
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -338,9 +344,6 @@ export default {
           .catch(e => this.alertBox.send("error", e, 10000));
       return;
     },
-    playVideo() {
-      this.youTubePlayer.playVideo();
-    },
     toggleTheatre() {
       this.theatre = !this.theatre;
       if (this.theatre) {
@@ -367,7 +370,7 @@ export default {
       e.preventDefault();
     },
     playerReady() {
-      // let oldTime = 0.0;
+      let oldTime = 0.0;
       setTimeout(() => {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
@@ -377,26 +380,31 @@ export default {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
       }, 1500);
-      // setInterval(() => {
-      //   if (!this.youTubePlayer) return;
-      //   this.youTubePlayer.getCurrentTime().then(time => {
-      //     if (time < oldTime - 1 || time > oldTime + 1) this.onSeek();
-      //     oldTime = time;
-      //   });
-      // }, 250);
+      setInterval(() => {
+        if (!this.youTubePlayer) return;
+        this.youTubePlayer.getCurrentTime().then(time => {
+          if (time < oldTime - 0.5 || time > oldTime + 0.5) {
+            this.onSeek();
+          }
+          oldTime = time;
+        });
+      }, 75);
       if (this.roomID) {
         setTimeout(() => {
           if (this.socket) {
             this.socket.emit("joinRoom", this.roomID);
             this.socket.on("reconnect", () => {
-              if (this.currentUser && this.socket.connected) {
-                this.currentUser
-                  .getIdToken()
-                  .then(token => {
-                    this.socket.emit("authenticate", token);
-                  })
-                  .catch(e => this.alertBox.send("error", e, 10000));
-              }
+              setTimeout(() => {
+                this.socket.emit("joinRoom", this.roomID);
+                if (this.currentUser && this.socket.connected) {
+                  this.currentUser
+                    .getIdToken()
+                    .then(token => {
+                      this.socket.emit("authenticate", token);
+                    })
+                    .catch(e => this.alertBox.send("error", e, 10000));
+                }
+              }, 0);
             });
             this.socket.on("roomUsersUpdate", users => {
               if (users) {
@@ -413,6 +421,8 @@ export default {
               }
             });
             this.socket.on("playerStatusUpdate", playerStatus => {
+              if (playerStatus && playerStatus.status)
+                this.playerStatus = playerStatus;
               if (playerStatus.status === "pause") {
                 this.preventPlayerEvents = true;
                 this.youTubePlayer.pauseVideo();
@@ -435,6 +445,7 @@ export default {
                 this.playerData.videoSource = queue[0].videoSource || "";
                 this.playerData.videoId = queue[0].videoId || "null";
               } else {
+                // when the queue is empty
                 this.playerData.videoSource = "";
                 this.playerData.videoId = "null";
               }
@@ -446,6 +457,7 @@ export default {
     onPlay() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
+      this.playerStatus.status = "play";
       if (this.roomID && this.socket) {
         this.youTubePlayer.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -458,6 +470,7 @@ export default {
     onPause() {
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
+      this.playerStatus.status = "pause";
       if (this.roomID && this.socket) {
         this.youTubePlayer.getCurrentTime().then(time => {
           this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -481,7 +494,7 @@ export default {
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
-          this.socket.emit("removeVideo", this.roomID, this.queue[0].uid);
+          this.socket.emit("skipVideo", this.roomID);
       }
       if (this.queue.length === 1) {
         document.exitFullscreen();
@@ -493,12 +506,14 @@ export default {
       if (!videoId) return;
 
       const sendUpdate = () => {
-        if (this.socket && this.socket.connected)
-          this.socket.emit("sendVideoUpdate", this.roomID, {
+        if (this.socket && this.socket.connected) {
+          this.showSearchResults = false;
+          this.socket.emit("addVideo", this.roomID, {
             videoSource: "youtube",
             videoId: videoId,
             title
           });
+        }
       };
 
       if (title) {
@@ -523,24 +538,27 @@ export default {
       if (!!uid && this.socket && this.socket.connected)
         this.socket.emit("removeVideo", this.roomID, uid);
     },
-    pushVideo(uid) {
-      if (!!uid && this.socket && this.socket.connected)
-        this.socket.emit("pushVideo", this.roomID, uid);
+    moveVideo(uid, position) {
+      if (
+        !!uid &&
+        position != undefined &&
+        !isNaN(position) &&
+        !!this.socket &&
+        this.socket.connected
+      )
+        this.socket.emit("moveVideo", this.roomID, uid, position);
     },
     youtubeOnError(e) {
       if (e) console.log("youtubeOnError", e);
     },
     onSeek() {
-      console.log("onSeek");
-      if (!this.$refs.youtube || !this.socket || !this.socket.connected) return;
+      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (!this.youTubePlayer || !this.socket || !this.socket.connected) return;
       this.youTubePlayer.getCurrentTime().then(time => {
-        this.youTubePlayer.getPlayerState().then(state => {
-          console.log("time", time, "state", state);
+        this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
+          status: this.playerStatus.status,
+          currentTime: time
         });
-        // this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
-        //   status: "play",
-        //   currentTime: time
-        // });
       });
     },
     searchVideo() {
