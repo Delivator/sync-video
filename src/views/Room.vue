@@ -149,6 +149,7 @@
                 @input="searchVideo"
                 @focusin="showSearchResults = true"
                 @focusout="searchHover ? (showSearchResults = true) : (showSearchResults = false)"
+                @click:clear="showSearchResults = false"
                 v-model="youtubeSearch"
                 clearable
               >
@@ -171,17 +172,13 @@
             <div
               v-if="queue.length > 0 || showSearchResults && searchResults.length > 0"
               @mouseenter="searchHover = true"
-              @mouseleave="listMouseLeave"
+              @mouseleave="searchHover = false"
             >
               <h6 class="title" v-if="showSearchResults && searchResults.length > 0">Search results:</h6>
               <v-list two-line v-if="showSearchResults && searchResults.length > 0">
-                <v-list-tile
-                  v-for="video in searchResults"
-                  :key="video.id.videoId"
-                  @click="void(0)"
-                >
+                <v-list-tile v-for="video in searchResults" :key="video.id" @click="void(0)">
                   <img
-                    :src="`https://img.youtube.com/vi/${video.id.videoId}/mqdefault.jpg`"
+                    :src="video.thumbnails.medium.url"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
@@ -190,23 +187,31 @@
                     <v-list-tile-title>
                       <a
                         :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
-                        :href="`https://www.youtube.com/watch?v=${video.id.videoId}`"
+                        :href="video.url"
                         target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        {{parseYoutubeTitle(video.snippet.title)}}
+                        {{parseYoutubeTitle(video.title)}}
                         <v-icon small>open_in_new</v-icon>
                       </a>
                     </v-list-tile-title>
                     <v-list-tile-sub-title>
-                      <span class="text--primary">{{video.snippet.channelTitle}}</span>
-                      &mdash; {{video.snippet.description}}
+                      <span class="text--primary">
+                        <a
+                          :href="video.channel.url"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="no-link-deko white--text"
+                        >{{parseYoutubeTitle(video.channel.title)}}</a>
+                      </span>
+                      &mdash; {{video.description}}
                     </v-list-tile-sub-title>
                   </v-list-tile-content>
                   <v-list-tile-action>
                     <v-btn
                       icon
                       ripple
-                      @click="addVideo(null, video.id.videoId, parseYoutubeTitle(video.snippet.title))"
+                      @click="addVideo(null, video.id, parseYoutubeTitle(video.title))"
                     >
                       <v-icon>playlist_add</v-icon>
                     </v-btn>
@@ -227,6 +232,7 @@
                         :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
                         :href="`https://www.youtube.com/watch?v=${video.videoId}`"
                         target="_blank"
+                        rel="noopener noreferrer"
                       >
                         {{video.title}}
                         <v-icon small>open_in_new</v-icon>
@@ -234,8 +240,12 @@
                     </v-list-tile-title>
                   </v-list-tile-content>
                   <v-spacer></v-spacer>
-                  <v-icon @click="moveVideo(video.uid, 0)" color="success">play_arrow</v-icon>
-                  <v-icon @click="removeVideo(video.uid)" color="error">close</v-icon>
+                  <v-icon
+                    @click="moveVideo(video.uid, 0)"
+                    color="success"
+                    class="no-select"
+                  >play_arrow</v-icon>
+                  <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
                 </v-list-tile>
               </v-list>
             </div>
@@ -261,13 +271,11 @@
 <script>
 import firebase from "firebase/app";
 import "firebase/firestore";
-import YouTube from "youtube-node";
+import YouTube from "simple-youtube-api";
 import settings from "../settings.json";
 
-const youTube = new YouTube();
+const youtube = new YouTube(settings.youTubeAPIKey);
 let searchTimeout = null;
-
-youTube.setKey(settings.youTubeAPIKey);
 
 export default {
   props: ["alertBox", "currentUser", "socket", "darkMode"],
@@ -290,7 +298,9 @@ export default {
       dbListener: null,
       theatre: false,
       users: [],
-      preventPlayerEvents: true,
+      preventPlayerEvents: false,
+      preventYouTubeSeekEvent: true,
+      firstPlayerEvent: true,
       youtubeSearch: "",
       queue: [],
       loading: true,
@@ -371,16 +381,17 @@ export default {
     },
     playerReady() {
       let oldTime = 0.0;
-      setTimeout(() => {
-        this.preventPlayerEvents = true;
-        if (this.socket && this.socket.connected)
-          this.socket.emit("getQueue", this.roomID);
-      }, 0);
+
       setTimeout(() => {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
       }, 1500);
+
+      // Custom seek "event" because the youtube embed player
+      // doesn't have a "seeked" event
       setInterval(() => {
+        // check every 75ms if the player is offset
+        // by -0.5s or +0.5s
         if (!this.youTubePlayer) return;
         this.youTubePlayer.getCurrentTime().then(time => {
           if (time < oldTime - 0.5 || time > oldTime + 0.5) {
@@ -389,10 +400,14 @@ export default {
           oldTime = time;
         });
       }, 75);
+
       if (this.roomID) {
         setTimeout(() => {
           if (this.socket) {
-            this.socket.emit("joinRoom", this.roomID);
+            if (this.socket.connected) {
+              this.socket.emit("joinRoom", this.roomID);
+              this.socket.emit("getQueue", this.roomID);
+            }
             this.socket.on("reconnect", () => {
               setTimeout(() => {
                 this.socket.emit("joinRoom", this.roomID);
@@ -424,19 +439,61 @@ export default {
               if (playerStatus && playerStatus.status)
                 this.playerStatus = playerStatus;
               if (playerStatus.status === "pause") {
-                this.preventPlayerEvents = true;
-                this.youTubePlayer.pauseVideo();
+                this.youTubePlayer
+                  .getPlayerState()
+                  .then(state => {
+                    if (isNaN(state))
+                      return console.error("[YouTube Player] State is NaN");
+                    if (state !== 2) {
+                      this.preventPlayerEvents = true;
+                      this.youTubePlayer.pauseVideo();
+                    }
+                  })
+                  .catch(console.error);
+                this.preventYouTubeSeekEvent = true;
                 this.youTubePlayer.seekTo(playerStatus.currentTime);
               } else if (playerStatus.status === "play") {
-                this.preventPlayerEvents = true;
-                this.youTubePlayer.getCurrentTime().then(time => {
-                  if (
-                    time < playerStatus.currentTime - 1 ||
-                    time > playerStatus.currentTime
-                  )
-                    this.youTubePlayer.seekTo(playerStatus.currentTime);
-                });
-                this.youTubePlayer.playVideo();
+                this.youTubePlayer
+                  .getCurrentTime()
+                  .then(currentTime => {
+                    let newTime = playerStatus.currentTime;
+                    if (
+                      currentTime < newTime - 0.5 ||
+                      currentTime > newTime + 0.5
+                    ) {
+                      this.preventYouTubeSeekEvent = true;
+                      this.youTubePlayer.seekTo(playerStatus.currentTime);
+
+                      this.youTubePlayer
+                        .getPlayerState()
+                        .then(state => {
+                          if (isNaN(state))
+                            return console.error(
+                              "[YouTube Player] State is NaN"
+                            );
+                          if (state !== 1) {
+                            this.preventPlayerEvents = true;
+                            this.youTubePlayer.playVideo();
+                          }
+                        })
+                        .catch(console.error);
+                    } else {
+                      this.youTubePlayer
+                        .getPlayerState()
+                        .then(state => {
+                          if (isNaN(state))
+                            return console.error(
+                              "[YouTube Player] State is NaN"
+                            );
+                          if (state !== 1) {
+                            this.preventPlayerEvents = true;
+                            this.youTubePlayer.playVideo();
+                          }
+                        })
+                        .catch(console.error);
+                    }
+                  })
+                  .catch(console.error);
               }
             });
             this.socket.on("updateQueue", queue => {
@@ -455,8 +512,16 @@ export default {
       }
     },
     onPlay() {
-      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
+
+      if (this.firstPlayerEvent && this.socket && this.socket.connected) {
+        this.firstPlayerEvent = false;
+        this.socket.emit("getPlayerStatus", this.roomID);
+        return;
+      }
+
+      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+
       this.playerStatus.status = "play";
       if (this.roomID && this.socket) {
         this.youTubePlayer.getCurrentTime().then(time => {
@@ -468,8 +533,16 @@ export default {
       }
     },
     onPause() {
-      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       if (this.queue.length < 1) return;
+
+      if (this.firstPlayerEvent && this.socket && this.socket.connected) {
+        this.firstPlayerEvent = false;
+        this.socket.emit("getPlayerStatus", this.roomID);
+        return;
+      }
+
+      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+
       this.playerStatus.status = "pause";
       if (this.roomID && this.socket) {
         this.youTubePlayer.getCurrentTime().then(time => {
@@ -484,19 +557,15 @@ export default {
       console.log("onBuffering");
     },
     onEnded() {
-      if (
-        this.queue.length > 1 &&
-        this.playerData.videoId === this.queue[1].videoId
-      ) {
-        this.preventPlayerEvents = true;
-        this.youTubePlayer.seekTo(0);
-      }
+      this.preventYouTubeSeekEvent = true;
+      this.youTubePlayer.seekTo(0);
+
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
         if (this.socket && this.socket.connected)
           this.socket.emit("skipVideo", this.roomID);
       }
-      if (this.queue.length === 1) {
+      if (this.queue.length <= 1) {
         document.exitFullscreen();
       }
     },
@@ -519,19 +588,18 @@ export default {
       if (title) {
         sendUpdate();
       } else {
-        youTube.getById(videoId, (error, result) => {
-          if (error) {
+        title = "YouTube Video";
+        youtube
+          .getVideoByID(videoId)
+          .then(video => {
+            if (!video) return console.error("[YouTube] No video found");
+            title = this.parseYoutubeTitle(video.title);
+            sendUpdate();
+          })
+          .catch(error => {
             console.error(error);
-            title = "YouTube Video";
-          } else {
-            if (result.pageInfo.totalResults > 0) {
-              title = this.parseYoutubeTitle(result.items[0].snippet.title);
-            } else {
-              title = "YouTube Video";
-            }
-          }
-          sendUpdate();
-        });
+            sendUpdate();
+          });
       }
     },
     removeVideo(uid) {
@@ -552,7 +620,8 @@ export default {
       if (e) console.log("youtubeOnError", e);
     },
     onSeek() {
-      if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (this.preventYouTubeSeekEvent)
+        return (this.preventYouTubeSeekEvent = false);
       if (!this.youTubePlayer || !this.socket || !this.socket.connected) return;
       this.youTubePlayer.getCurrentTime().then(time => {
         this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -562,24 +631,24 @@ export default {
       });
     },
     searchVideo() {
-      if (this.youtubeSearch === "" || this.youtubeSearch.length < 1) return;
-      if (searchTimeout !== null) {
-        clearTimeout(searchTimeout);
-      }
+      if (!this.youtubeSearch || this.youtubeSearch.length < 1) return;
+
+      if (searchTimeout !== null) clearTimeout(searchTimeout);
+
       searchTimeout = setTimeout(() => {
-        youTube.search(
-          this.youtubeSearch,
-          10,
-          { type: "video", part: "snippet" },
-          (error, results) => {
-            if (error) console.error(error);
-            this.searchResults = results.items;
-          }
-        );
-      }, 333);
-    },
-    listMouseLeave() {
-      this.searchHover = false;
+        youtube
+          .searchVideos(this.youtubeSearch, 10)
+          .then(results => {
+            if (!results || results.length < 1)
+              return console.error("[YouTube] No video found");
+            // Remove livestreams from search results
+            results = results.filter(
+              video => video.raw.snippet.liveBroadcastContent === "none"
+            );
+            this.searchResults = results;
+          })
+          .catch(console.error);
+      }, 400);
     },
     parseYoutubeTitle(title) {
       if (!title) return;
@@ -598,7 +667,9 @@ export default {
   },
   mounted() {
     let roomHistory = [];
+
     this.db = firebase.firestore();
+
     if (this.db) {
       this.db
         .collection("rooms")
@@ -612,16 +683,21 @@ export default {
             this.path = querySnapshot.id;
             this.isPublic = this.roomData.public;
 
-            if (!localStorage.roomHistory) {
+            // create local storage key to save room history, if one doesn't exist already
+            if (!localStorage.roomHistory)
               localStorage.roomHistory = JSON.stringify(roomHistory);
-            }
+            // load current room history
             roomHistory = JSON.parse(localStorage.roomHistory);
+            // remove current room from history
             roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+            // add current room to the beginning of history
             roomHistory.unshift({
               id: this.roomID,
               title: this.roomData.title
             });
+            // keep room history < 6
             if (roomHistory.length > 5) roomHistory.pop();
+            // save room history in local storage
             localStorage.roomHistory = JSON.stringify(roomHistory);
           }
         })

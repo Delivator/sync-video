@@ -214,17 +214,17 @@ io.on("connection", (socket) => {
 
   socket.on("getPlayerStatus", (room) => {
     if (!room || !rooms || !rooms[room] || !rooms[room].playerStatus) return;
-    let playerStatus = rooms[room].playerStatus;
-    if (playerStatus.status === "play") {
+    let newPlayerStatus = { ...{}, ...rooms[room].playerStatus };
+    if (newPlayerStatus.status === "play") {
       const timeElapsed = (new Date().getTime() - rooms[room].playerStatus.eventTime) / 1000;
-      playerStatus.currentTime += timeElapsed;
+      newPlayerStatus.currentTime += timeElapsed;
     }
-    socket.emit("playerStatusUpdate", playerStatus);
+    socket.emit("playerStatusUpdate", newPlayerStatus);
   });
 
   socket.on("skipVideo", (room) => {
     if (!room || !rooms || !rooms[room] || !rooms[room].queue || !rooms[room].playerStatus) return;
-    // only skip videos every 0.25s to prevent double skipping
+    // only skip videos every 0.5s to prevent double skipping
     if (rooms[room].lastRemove && rooms[room].lastRemove > new Date().getTime()) return;
 
     if (rooms[room].queue.length > 0) {
@@ -236,8 +236,9 @@ io.on("connection", (socket) => {
       setTimeout(() => {
         rooms[room].playerStatus.status = "play";
         rooms[room].playerStatus.currentTime = 0.0;
+        rooms[room].playerStatus.eventTime = new Date().getTime();
         io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
-        rooms[room].lastRemove = new Date().getTime() + 250;
+        rooms[room].lastRemove = new Date().getTime() + 500;
       }, 500);
     }
   });
