@@ -66,10 +66,11 @@
               <template #activator="data">
                 <h5
                   v-on="data.on"
-                  :class="`headline ${socket && socket.connected ? 'green' : 'red'}--text`"
-                >●</h5>
+                  class="headline"
+                  :class="socket.connected ? pingColor : 'red--text'"
+                >&nbsp;●</h5>
               </template>
-              <span>{{socket && socket.connected ? 'Connected' : 'Not Connected'}}</span>
+              <span>{{socket && socket.connected ? `Ping: ${ping}ms` : 'No connection to server'}}</span>
             </v-tooltip>
             <v-spacer></v-spacer>
             <v-btn icon @click="toggleTheatre">
@@ -140,7 +141,7 @@
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>Playlist</v-toolbar-title>
+            <v-toolbar-title>Playlist {{queue.length > 0 ? `(${queue.length}): ${queue[0].title}` : ""}}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
             <v-form @submit="addVideo">
@@ -309,6 +310,8 @@ export default {
       showSearchResults: false,
       searchHover: false,
       playerStatus: { status: "play" },
+      ping: 0,
+      pingColor: "red--text",
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -402,16 +405,23 @@ export default {
         });
       }, 75);
 
+      setInterval(() => {
+        if (this.socket.connected)
+          this.socket.emit("getPing", new Date().getTime());
+      }, 5000);
+
       if (this.roomID) {
         setTimeout(() => {
           if (this.socket) {
             if (this.socket.connected) {
               this.socket.emit("joinRoom", this.roomID);
               this.socket.emit("getQueue", this.roomID);
+              this.socket.emit("getPing", new Date().getTime());
             }
             this.socket.on("reconnect", () => {
               setTimeout(() => {
                 this.socket.emit("joinRoom", this.roomID);
+                this.socket.emit("getPing", new Date().getTime());
                 if (this.currentUser && this.socket.connected) {
                   this.currentUser
                     .getIdToken()
@@ -508,6 +518,19 @@ export default {
                 this.playerData.videoId = "null";
               }
             });
+            this.socket.on("peng", ping => {
+              this.ping = ping;
+
+              if (this.ping < 50) {
+                this.pingColor = "green--text";
+              } else if (this.ping < 100) {
+                this.pingColor = "lime--text";
+              } else if (this.ping < 150) {
+                this.pingColor = "yellow--text text--darken-3";
+              } else if (this.ping > 200) {
+                this.pingColor = "orange--text text--darken-3";
+              }
+            });
           }
         }, 0);
       }
@@ -572,7 +595,7 @@ export default {
     },
     animatePlaylistAddButton(iconElement) {
       if (iconElement.classList.contains("playlist-add-icon")) {
-          iconElement.innerHTML = "playlist_add_check";
+        iconElement.innerHTML = "playlist_add_check";
         if (this.darkMode) {
           iconElement.classList.add("animate-playlist-add-dark");
         } else {
@@ -586,7 +609,8 @@ export default {
       }
     },
     addVideo(event, videoId, title) {
-      if (event) event.preventDefault();
+      if (event && event.type === "submit") event.preventDefault();
+      if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
       if (!videoId) return;
 
       if (event) {
@@ -594,11 +618,12 @@ export default {
           if (event.srcElement.classList.contains("playlist-add-icon")) {
             this.animatePlaylistAddButton(event.srcElement);
           } else if (event.srcElement.querySelector(".playlist-add-icon")) {
-            this.animatePlaylistAddButton(event.srcElement.querySelector(".playlist-add-icon"));
+            this.animatePlaylistAddButton(
+              event.srcElement.querySelector(".playlist-add-icon")
+            );
           }
         }
       }
-      if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
 
       const sendUpdate = () => {
         if (this.socket && this.socket.connected) {

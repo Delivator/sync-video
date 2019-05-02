@@ -243,6 +243,13 @@ io.on("connection", (socket) => {
       }, 500);
     }
   });
+
+  socket.on("getPing", (startTime) => {
+    if (!startTime || isNaN(startTime)) return;
+    let ping = new Date().getTime() - startTime;
+    if (ping < 0) ping = 0;
+    socket.emit("peng", ping);
+  });
 });
 
 server.listen(settings.nodeServerPort);
