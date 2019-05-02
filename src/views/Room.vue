@@ -186,7 +186,7 @@
                   <v-list-tile-content>
                     <v-list-tile-title>
                       <a
-                        :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                        :class="`no-link-deko ${darkMode ? 'white--text' : 'black--text'}`"
                         :href="video.url"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -201,7 +201,7 @@
                           :href="video.channel.url"
                           target="_blank"
                           rel="noopener noreferrer"
-                          class="no-link-deko white--text"
+                          :class="`no-link-deko ${darkMode ? 'white--text' : 'black--text'}`"
                         >{{parseYoutubeTitle(video.channel.title)}}</a>
                       </span>
                       &mdash; {{video.description}}
@@ -211,9 +211,10 @@
                     <v-btn
                       icon
                       ripple
-                      @click="addVideo(null, video.id, parseYoutubeTitle(video.title))"
+                      @click="addVideo($event, video.id, parseYoutubeTitle(video.title))"
+                      class="playlist-add-button"
                     >
-                      <v-icon>playlist_add</v-icon>
+                      <v-icon class="playlist-add-icon">playlist_add</v-icon>
                     </v-btn>
                   </v-list-tile-action>
                 </v-list-tile>
@@ -558,7 +559,7 @@ export default {
     },
     onEnded() {
       this.preventYouTubeSeekEvent = true;
-      this.youTubePlayer.seekTo(0);
+      this.youTubePlayer.seekTo(0.0);
 
       if (this.queue.length > 0) {
         this.preventPlayerEvents = true;
@@ -569,14 +570,38 @@ export default {
         document.exitFullscreen();
       }
     },
+    animatePlaylistAddButton(iconElement) {
+      if (iconElement.classList.contains("playlist-add-icon")) {
+          iconElement.innerHTML = "playlist_add_check";
+        if (this.darkMode) {
+          iconElement.classList.add("animate-playlist-add-dark");
+        } else {
+          iconElement.classList.add("animate-playlist-add-bright");
+        }
+        setTimeout(() => {
+          iconElement.classList.remove("animate-playlist-add-dark");
+          iconElement.classList.remove("animate-playlist-add-bright");
+          iconElement.innerHTML = "playlist_add";
+        }, 1000);
+      }
+    },
     addVideo(event, videoId, title) {
       if (event) event.preventDefault();
-      if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
       if (!videoId) return;
+
+      if (event) {
+        if (event.srcElement) {
+          if (event.srcElement.classList.contains("playlist-add-icon")) {
+            this.animatePlaylistAddButton(event.srcElement);
+          } else if (event.srcElement.querySelector(".playlist-add-icon")) {
+            this.animatePlaylistAddButton(event.srcElement.querySelector(".playlist-add-icon"));
+          }
+        }
+      }
+      if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
 
       const sendUpdate = () => {
         if (this.socket && this.socket.connected) {
-          this.showSearchResults = false;
           this.socket.emit("addVideo", this.roomID, {
             videoSource: "youtube",
             videoId: videoId,

@@ -22,3 +22,4 @@ yarn-error.log*
 src/firebase.json
 serviceAccountKey.json
 src/settings.json
+src/faviconData.json

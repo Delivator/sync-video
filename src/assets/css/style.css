@@ -78,3 +78,29 @@ html {
 .no-select {
   user-select: none;
 }
+
+.animate-playlist-add-dark {
+  animation: playlist-add-dark 1.5s;
+}
+
+.animate-playlist-add-bright {
+  animation: playlist-add-birght 1.5s;
+}
+
+@keyframes playlist-add-dark {
+  0% {
+    color: #4caf50;
+  }
+  100% {
+    color: #fff;
+  }
+}
+
+@keyframes playlist-add-bright {
+  0% {
+    color: #4caf50;
+  }
+  100% {
+    color: #000;
+  }
+}

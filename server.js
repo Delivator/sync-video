@@ -224,21 +224,22 @@ io.on("connection", (socket) => {
 
   socket.on("skipVideo", (room) => {
     if (!room || !rooms || !rooms[room] || !rooms[room].queue || !rooms[room].playerStatus) return;
-    // only skip videos every 0.5s to prevent double skipping
-    if (rooms[room].lastRemove && rooms[room].lastRemove > new Date().getTime()) return;
+    // only skip videos every 500ms to prevent double skipping
+    if (rooms[room].lastRemove && rooms[room].lastRemove + 500 > new Date().getTime()) return;
 
     if (rooms[room].queue.length > 0) {
+      rooms[room].lastRemove = new Date().getTime();
       rooms[room].queue.shift();
       io.to(room).emit("updateQueue", rooms[room].queue);
       rooms[room].playerStatus.status = "pause";
       rooms[room].playerStatus.currentTime = 0.0;
+      rooms[room].playerStatus.eventTime = new Date().getTime();
       io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
       setTimeout(() => {
         rooms[room].playerStatus.status = "play";
         rooms[room].playerStatus.currentTime = 0.0;
         rooms[room].playerStatus.eventTime = new Date().getTime();
         io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
-        rooms[room].lastRemove = new Date().getTime() + 500;
       }, 500);
     }
   });
