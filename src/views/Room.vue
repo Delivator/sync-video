@@ -141,7 +141,7 @@
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>Playlist {{queue.length > 0 ? `(${queue.length}): ${queue[0].title}` : ""}}</v-toolbar-title>
+            <v-toolbar-title>Playlist{{queue.length > 0 ? ` (${queue.length}): ${queue[0].title}` : ""}}</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
             <v-form @submit="addVideo">
@@ -171,12 +171,12 @@
               <input type="submit" class="hide">
             </v-form>
             <div
-              v-if="queue.length > 0 || showSearchResults && searchResults.length > 0"
+              v-show="queue.length > 0 || showSearchResults && searchResults.length > 0"
               @mouseenter="searchHover = true"
               @mouseleave="searchHover = false"
             >
               <h6 class="title" v-if="showSearchResults && searchResults.length > 0">Search results:</h6>
-              <v-list two-line v-if="showSearchResults && searchResults.length > 0">
+              <v-list two-line v-show="showSearchResults && searchResults.length > 0">
                 <v-list-tile v-for="video in searchResults" :key="video.id" @click="void(0)">
                   <img
                     :src="video.thumbnails.medium.url"
@@ -220,7 +220,7 @@
                   </v-list-tile-action>
                 </v-list-tile>
               </v-list>
-              <v-list v-else>
+              <v-list v-show="queue.length > 0 || searchResults.length < 1">
                 <v-list-tile v-for="video in queue" :key="video.uid" avatar>
                   <img
                     :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
@@ -251,7 +251,7 @@
                 </v-list-tile>
               </v-list>
             </div>
-            <div v-else>
+            <div v-show="queue.length < 1 && !showSearchResults">
               <p>No videos in queue</p>
             </div>
           </v-card-text>
@@ -311,7 +311,7 @@ export default {
       searchHover: false,
       playerStatus: { status: "play" },
       ping: 0,
-      pingColor: "red--text",
+      pingColor: "grey--text",
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -405,23 +405,16 @@ export default {
         });
       }, 75);
 
-      setInterval(() => {
-        if (this.socket.connected)
-          this.socket.emit("getPing", new Date().getTime());
-      }, 5000);
-
       if (this.roomID) {
         setTimeout(() => {
           if (this.socket) {
             if (this.socket.connected) {
               this.socket.emit("joinRoom", this.roomID);
               this.socket.emit("getQueue", this.roomID);
-              this.socket.emit("getPing", new Date().getTime());
             }
             this.socket.on("reconnect", () => {
               setTimeout(() => {
                 this.socket.emit("joinRoom", this.roomID);
-                this.socket.emit("getPing", new Date().getTime());
                 if (this.currentUser && this.socket.connected) {
                   this.currentUser
                     .getIdToken()
@@ -518,7 +511,7 @@ export default {
                 this.playerData.videoId = "null";
               }
             });
-            this.socket.on("peng", ping => {
+            this.socket.on("pong", ping => {
               this.ping = ping;
 
               if (this.ping < 50) {

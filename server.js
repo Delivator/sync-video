@@ -1,7 +1,9 @@
 const express = require("express");
 const app = express();
 const server = require("http").Server(app);
-const io = require("socket.io")(server);
+const io = require("socket.io")(server, {
+  pingInterval: 5000
+});
 const history = require("connect-history-api-fallback");
 const fs = require("fs");
 const admin = require("firebase-admin");
@@ -242,13 +244,6 @@ io.on("connection", (socket) => {
         io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
       }, 500);
     }
-  });
-
-  socket.on("getPing", (startTime) => {
-    if (!startTime || isNaN(startTime)) return;
-    let ping = new Date().getTime() - startTime;
-    if (ping < 0) ping = 0;
-    socket.emit("peng", ping);
   });
 });
 
