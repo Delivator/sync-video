@@ -148,8 +148,8 @@
               <v-text-field
                 label="YouTube search or URL"
                 @input="searchVideo"
-                @focusin="showSearchResults = true"
-                @focusout="searchHover ? (showSearchResults = true) : (showSearchResults = false)"
+                @focusin="showSearchResults = searchResults.length > 0"
+                @focusout="showSearchResults = searchHover"
                 @click:clear="showSearchResults = false"
                 v-model="youtubeSearch"
                 clearable
@@ -171,13 +171,18 @@
               <input type="submit" class="hide">
             </v-form>
             <div
-              v-show="queue.length > 0 || showSearchResults && searchResults.length > 0"
+              v-show="queue.length > 0 || showSearchResults"
               @mouseenter="searchHover = true"
               @mouseleave="searchHover = false"
             >
-              <h6 class="title" v-if="showSearchResults && searchResults.length > 0">Search results:</h6>
-              <v-list two-line v-show="showSearchResults && searchResults.length > 0">
-                <v-list-tile v-for="video in searchResults" :key="video.id" @click="void(0)">
+              <h6 class="title" v-if="showSearchResults">Search results:</h6>
+              <v-list two-line v-show="showSearchResults">
+                <v-list-tile
+                  v-for="video in searchResults"
+                  two-line
+                  :key="video.id"
+                  :class="darkMode ? 'queue-item-dark' : 'queue-item'"
+                >
                   <img
                     :src="video.thumbnails.medium.url"
                     height="50"
@@ -220,39 +225,58 @@
                   </v-list-tile-action>
                 </v-list-tile>
               </v-list>
-              <v-list v-show="queue.length > 0 || searchResults.length < 1">
-                <v-list-tile v-for="video in queue" :key="video.uid" avatar>
-                  <img
-                    :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
-                    height="50"
-                    width="88.889"
-                    class="playlist-thumbnail"
-                  >
-                  <v-list-tile-content>
-                    <v-list-tile-title>
-                      <a
-                        :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
-                        :href="`https://www.youtube.com/watch?v=${video.videoId}`"
-                        target="_blank"
-                        rel="noopener noreferrer"
+              <v-list v-show="queue.length > 0 && !showSearchResults">
+                <draggable @end="playlistSortEnd($event)" filter="a, i.v-icon">
+                  <transition-group type="transition" name="flip-list">
+                    <v-list-tile
+                      v-for="(video, index) in queue"
+                      :key="video.uid"
+                      avatar
+                      :uid="video.uid"
+                      class="move-cursor"
+                      :class="darkMode ? 'queue-item-dark' : 'queue-item'"
+                    >
+                      <span class="queue-number">#{{index + 1}}</span>
+                      <img
+                        :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                        height="50"
+                        width="88.889"
+                        class="playlist-thumbnail"
                       >
-                        {{video.title}}
-                        <v-icon small>open_in_new</v-icon>
-                      </a>
-                    </v-list-tile-title>
-                  </v-list-tile-content>
-                  <v-spacer></v-spacer>
-                  <v-icon
-                    @click="moveVideo(video.uid, 0)"
-                    color="success"
-                    class="no-select"
-                  >play_arrow</v-icon>
-                  <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
-                </v-list-tile>
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          <a
+                            :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                            :href="`https://www.youtube.com/watch?v=${video.videoId}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {{video.title}}
+                            <v-icon small>open_in_new</v-icon>
+                          </a>
+                        </v-list-tile-title>
+                      </v-list-tile-content>
+                      <v-spacer></v-spacer>
+                      <v-icon
+                        v-if="index !== 0"
+                        @click="moveVideo(video.uid, 0)"
+                        color="success"
+                        class="no-select"
+                      >play_arrow</v-icon>
+                      <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
+                    </v-list-tile>
+                  </transition-group>
+                </draggable>
               </v-list>
             </div>
             <div v-show="queue.length < 1 && !showSearchResults">
-              <p>No videos in queue</p>
+              <v-container>
+                <v-layout row wrap>
+                  <v-flex xs12>
+                    <h6 class="title">No videos in queue</h6>
+                  </v-flex>
+                </v-layout>
+              </v-container>
             </div>
           </v-card-text>
         </v-card>
@@ -275,11 +299,15 @@ import firebase from "firebase/app";
 import "firebase/firestore";
 import YouTube from "simple-youtube-api";
 import settings from "../settings.json";
+import draggable from "vuedraggable";
 
 const youtube = new YouTube(settings.youTubeAPIKey);
 let searchTimeout = null;
 
 export default {
+  components: {
+    draggable
+  },
   props: ["alertBox", "currentUser", "socket", "darkMode"],
   data() {
     return {
@@ -689,6 +717,7 @@ export default {
               video => video.raw.snippet.liveBroadcastContent === "none"
             );
             this.searchResults = results;
+            this.showSearchResults = this.searchResults.length > 0;
           })
           .catch(console.error);
       }, 400);
@@ -700,6 +729,20 @@ export default {
         "<!doctype HTML><body>" + title,
         "text/html"
       ).body.textContent;
+    },
+    playlistSortEnd(event) {
+      if (event && event.type === "end") {
+        if (
+          event.item &&
+          event.item.firstChild &&
+          event.item.firstChild.getAttribute("uid")
+        ) {
+          this.moveVideo(
+            event.item.firstChild.getAttribute("uid"),
+            event.newIndex
+          );
+        }
+      }
     }
   },
   beforeRouteLeave(to, from, next) {
