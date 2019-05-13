@@ -116,14 +116,14 @@
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>Chat</v-toolbar-title>
+            <v-toolbar-title>Users</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
             <div v-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
               <v-chip
                 v-for="user in users"
                 :key="user.displayName"
-                :color="user.isMe ? 'primary' : ''"
+                :class="user.isMe ? 'primary white--text' : ''"
               >
                 <v-avatar v-if="user.avatar">
                   <img :src="user.avatar" alt="Avatar">
@@ -542,13 +542,13 @@ export default {
             this.socket.on("pong", ping => {
               this.ping = ping;
 
-              if (this.ping < 50) {
+              if (ping < 50) {
                 this.pingColor = "green--text";
-              } else if (this.ping < 100) {
+              } else if (ping < 100) {
                 this.pingColor = "lime--text";
-              } else if (this.ping < 150) {
+              } else if (ping < 150) {
                 this.pingColor = "yellow--text text--darken-3";
-              } else if (this.ping > 200) {
+              } else if (ping > 200) {
                 this.pingColor = "orange--text text--darken-3";
               }
             });
@@ -657,6 +657,8 @@ export default {
       };
 
       if (title) {
+        // max title length 100 characters
+        title = String(title).substring(0, 100);
         sendUpdate();
       } else {
         title = "YouTube Video";

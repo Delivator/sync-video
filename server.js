@@ -173,13 +173,29 @@ io.on("connection", (socket) => {
   });
 
   socket.on("addVideo", (room, videoObj) => {
-    if (!room || !videoObj) return;
+    if (!room || !videoObj || !videoObj.videoId) return;
     if (!rooms[room]) rooms[room] = {};
     if (!rooms[room].queue) rooms[room].queue = [];
+    if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
     // max queue size 50 entries
     if (rooms[room].queue.length > 49) return;
-    const uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
-    rooms[room].queue.push({ ...{ uid }, ...videoObj });
+
+    if (!videoObj.title) videoObj.title = "Video";
+    // max title length 100 characters
+    videoObj.title = String(videoObj.title).substring(0, 100);
+    // max video id length 11 characters
+    videoObj.videoId = String(videoObj.videoId).substring(0, 11);
+    // create a unique id for each entry
+    videoObj.uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
+    rooms[room].queue.push(videoObj);
+
+    if (rooms[room].queue.length === 1) {
+      rooms[room].playerStatus.status = "play";
+      rooms[room].playerStatus.currentTime = 0.0;
+      rooms[room].playerStatus.eventTime = new Date().getTime();
+      io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
+    }
+
     io.to(room).emit("updateQueue", rooms[room].queue);
   });
 

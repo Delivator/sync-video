@@ -63,8 +63,21 @@
         transition="slide-y-transition"
         class="alert"
       >{{ alertBox.text }}</v-alert>
-      <router-view :alertBox="alertBox" :currentUser="currentUser" :socket="socket" :darkMode="darkMode"/>
+      <router-view
+        :alertBox="alertBox"
+        :currentUser="currentUser"
+        :socket="socket"
+        :darkMode="darkMode"
+      />
     </v-content>
+    <v-footer height="auto">
+      <v-layout row wrap justify-center>
+        <v-flex xs12 py-3 text-xs-center>
+          Made with 💚 by <a :class="darkMode ? 'white--text' : 'black--text'" href="https://github.com/Delivator" target="_blank" rel="noopener noreferrer">Delivator</a>
+          &dash; <a :class="darkMode ? 'white--text' : 'black--text'" href="https://github.com/Delivator/sync-video" target="_blank" rel="noopener noreferrer">Source code</a>
+        </v-flex>
+      </v-layout>
+    </v-footer>
   </v-app>
 </template>
 
