@@ -56,13 +56,16 @@
       </v-menu>
     </v-toolbar>
     <v-content>
-      <v-alert
-        v-model="alertBox.show"
-        :type="alertBox.type || 'info'"
-        dismissible
-        transition="slide-y-transition"
-        class="alert"
-      >{{ alertBox.text }}</v-alert>
+      <div class="alert">
+        <v-alert
+          v-for="alert in alerts"
+          :key="alert.id"
+          v-model="alert.show"
+          :type="alert.type"
+          dismissible
+          transition="slide-y-transition"
+        >{{ alert.text }}</v-alert>
+      </div>
       <router-view
         :alertBox="alertBox"
         :currentUser="currentUser"
@@ -73,8 +76,20 @@
     <v-footer height="auto">
       <v-layout row wrap justify-center>
         <v-flex xs12 py-3 text-xs-center>
-          Made with 💚 by <a :class="darkMode ? 'white--text' : 'black--text'" href="https://github.com/Delivator" target="_blank" rel="noopener noreferrer">Delivator</a>
-          &dash; <a :class="darkMode ? 'white--text' : 'black--text'" href="https://github.com/Delivator/sync-video" target="_blank" rel="noopener noreferrer">Source code</a>
+          Made with 💚 by
+          <a
+            :class="darkMode ? 'white--text' : 'black--text'"
+            href="https://github.com/Delivator"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Delivator</a>
+          &dash;
+          <a
+            :class="darkMode ? 'white--text' : 'black--text'"
+            href="https://github.com/Delivator/sync-video"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Source code</a>
         </v-flex>
       </v-layout>
     </v-footer>
@@ -96,6 +111,7 @@ export default {
   name: "App",
   data() {
     return {
+      alerts: [],
       alertBox: {
         show: false,
         type: "info",
@@ -110,12 +126,18 @@ export default {
               message = message.message;
             }
           }
-          this.alertBox.show = true;
-          this.alertBox.type = type;
-          this.alertBox.text = message;
-          setTimeout(() => {
-            this.alertBox.show = false;
-          }, timeout);
+
+          let id = MD5(Math.random().toString()).toString();
+
+          this.alerts.push({
+            id,
+            show: true,
+            type,
+            text: message,
+            timeout: setTimeout(() => {
+              this.alerts.filter(alert => alert.id === id)[0].show = false;
+            }, timeout)
+          });
         }
       },
       currentUser: null,

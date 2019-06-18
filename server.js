@@ -172,13 +172,13 @@ io.on("connection", (socket) => {
     socket.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
   });
 
-  socket.on("addVideo", (room, videoObj) => {
+  socket.on("addVideo", (room, videoObj, callback) => {
     if (!room || !videoObj || !videoObj.videoId) return;
     if (!rooms[room]) rooms[room] = {};
     if (!rooms[room].queue) rooms[room].queue = [];
     if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
     // max queue size 50 entries
-    if (rooms[room].queue.length > 49) return;
+    if (rooms[room].queue.length > 49) return callback("Max queue length is 50");
 
     if (!videoObj.title) videoObj.title = "Video";
     // max title length 100 characters
@@ -187,7 +187,10 @@ io.on("connection", (socket) => {
     videoObj.videoId = String(videoObj.videoId).substring(0, 11);
     // create a unique id for each entry
     videoObj.uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
+    // push video object in array and send callback
     rooms[room].queue.push(videoObj);
+    callback();
+
 
     if (rooms[room].queue.length === 1) {
       rooms[room].playerStatus.status = "play";

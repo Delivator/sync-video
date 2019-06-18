@@ -119,7 +119,8 @@
             <v-toolbar-title>Users</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <div v-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
+            <v-progress-circular color="primary" indeterminate v-if="!socket.connected"></v-progress-circular>
+            <div v-else-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
               <v-chip
                 v-for="user in users"
                 :key="user.displayName"
@@ -130,6 +131,9 @@
                 </v-avatar>
                 {{user.displayName}}
               </v-chip>
+            </div>
+            <div v-else>
+              <p class="subheading">No users connected</p>
             </div>
             <p></p>
           </v-card-text>
@@ -163,7 +167,7 @@
                         v-on="on"
                       >list</v-icon>
                     </template>
-                    Back to playlist
+                    Back to playlist view
                   </v-tooltip>
                 </template>
                 <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
@@ -287,6 +291,9 @@
         <v-btn to="/rooms">My rooms</v-btn>
       </v-flex>
     </v-layout>
+    <v-alert type="info" dismissible v-model="showAlert">
+      Video {{ videoTitle }} added
+    </v-alert>
   </v-container>
 </template>
 
@@ -343,7 +350,9 @@ export default {
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
-      }
+      },
+      videoTitle: "",
+      showAlert: false
     };
   },
   computed: {
@@ -648,10 +657,15 @@ export default {
 
       const sendUpdate = () => {
         if (this.socket && this.socket.connected) {
-          this.socket.emit("addVideo", this.roomID, {
+          let options = {
             videoSource: "youtube",
             videoId: videoId,
             title
+          };
+
+          this.socket.emit("addVideo", this.roomID, options, (err) => {
+            if (err) return this.alertBox.send("error", `Error adding the video: ${err}`);
+            this.alertBox.send("info", `Video ${title} added`, 3000);
           });
         }
       };
