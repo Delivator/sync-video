@@ -19,6 +19,13 @@ Sync video is a app for synchronizing videos online.
 6. Copy the example firebase.json file from `src/firebase_example.json` to `src/firebase.json` and fill it with your config from the firebase console (in json format)
 7. Download your service account key from `https://console.firebase.google.com/u/0/project/<YOUR_PROJECT_ID>/settings/serviceaccounts/adminsdk`, rename it to `serviceAccountKey.json` and copy it to the root folder of the project
 
+## Firebase settings
+You can find the database rules in the `firestore-rules.txt` file inside the project's root directory.
+
+For custom email url's you can use the pattern `https://sync-video.me/?mode=<action>&oobCode=<code>` where `https://sync-video.me/` would be replaced with your own url.
+
+# Usage
+
 ### Compiles and hot-reloads for development
 ```
 npm run serve

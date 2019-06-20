@@ -1,8 +1,8 @@
 <template>
-  <v-app :dark="darkMode">
+  <v-app :dark="userSettings.darkMode">
     <v-toolbar app>
       <v-toolbar-title class="headline text-uppercase">
-        <router-link to="/" :class="darkMode ? 'white--text' : 'black--text'">
+        <router-link to="/" :class="userSettings.darkMode ? 'white--text' : 'black--text'">
           <span>SYNC-VIDEO</span>
           <span class="font-weight-light">.ME</span>
         </router-link>
@@ -35,7 +35,7 @@
               <v-list-tile-title>Rooms</v-list-tile-title>
             </v-list-tile-content>
           </v-list-tile>
-          <v-list-tile @click="toggleDarkMode">
+          <v-list-tile @click="userSettings.darkMode = !userSettings.darkMode">
             <v-list-tile-action>
               <v-icon>invert_colors</v-icon>
             </v-list-tile-action>
@@ -70,7 +70,8 @@
         :alertBox="alertBox"
         :currentUser="currentUser"
         :socket="socket"
-        :darkMode="darkMode"
+        :userSettings="userSettings"
+        :db="db"
       />
     </v-content>
     <v-footer height="auto">
@@ -78,14 +79,14 @@
         <v-flex xs12 py-3 text-xs-center>
           Made with 💚 by
           <a
-            :class="darkMode ? 'white--text' : 'black--text'"
+            :class="userSettings.darkMode ? 'white--text' : 'black--text'"
             href="https://github.com/Delivator"
             target="_blank"
             rel="noopener noreferrer"
           >Delivator</a>
-          &dash;
+          &ndash;
           <a
-            :class="darkMode ? 'white--text' : 'black--text'"
+            :class="userSettings.darkMode ? 'white--text' : 'black--text'"
             href="https://github.com/Delivator/sync-video"
             target="_blank"
             rel="noopener noreferrer"
@@ -103,6 +104,7 @@
 <script>
 import firebase from "firebase/app";
 import "firebase/auth";
+import "firebase/firestore";
 import io from "socket.io-client";
 import { MD5 } from "crypto-js";
 import settings from "./settings.json";
@@ -143,13 +145,28 @@ export default {
       currentUser: null,
       gravatarUrl: null,
       socket: null,
-      darkMode:
-        localStorage.getItem("darkMode") === null
-          ? true
-          : localStorage.getItem("darkMode") === "true"
-          ? true
-          : false
+      userSettings: {
+        darkMode: true,
+        roomHistory: []
+      },
+      db: null,
+      skipSettingsEvent: false
     };
+  },
+  watch: {
+    userSettings: {
+      handler(newUserSettings) {
+        if (this.skipSettingsEvent) return this.skipSettingsEvent = false;
+        localStorage.userSettings = JSON.stringify(newUserSettings);
+        if (!this.db || !this.currentUser) return;
+        this.db
+          .collection("user_settings")
+          .doc(this.currentUser.uid)
+          .set(newUserSettings)
+          .catch(console.error);
+      },
+      deep: true
+    }
   },
   methods: {
     signOut: function() {
@@ -168,17 +185,58 @@ export default {
       return `https://www.gravatar.com/avatar/${MD5(
         email.trim()
       ).toString()}?s=${size}`;
-    },
-    toggleDarkMode() {
-      this.darkMode = !this.darkMode;
-      this.darkMode
-        ? localStorage.setItem("darkMode", true)
-        : localStorage.setItem("darkMode", false);
     }
   },
   mounted() {
     const mode = this.$route.query.mode;
     const actionCode = this.$route.query.oobCode;
+
+    if (!this.db) this.db = firebase.firestore();
+
+    if (localStorage.userSettings) {
+      this.userSettings = JSON.parse(localStorage.userSettings);
+    } else {
+      if (this.db && this.currentUser) {
+        this.db
+          .collection("user_settings")
+          .doc(this.currentUser.uid)
+          .get()
+          .then(doc => {
+            if (doc.exists) {
+              this.userSettings = doc.data();
+            } else {
+              this.userSettings = {
+                darkMode: true,
+                roomHistory: []
+              };
+            }
+          })
+          .catch(error => {
+            console.error(error);
+            this.userSettings = {
+              darkMode: true,
+              roomHistory: []
+            };
+          });
+      } else {
+        this.userSettings = {
+          darkMode: true,
+          roomHistory: []
+        };
+      }
+    }
+
+    setTimeout(() => {
+      if (this.db && this.currentUser) {
+        this.db
+          .collection("user_settings")
+          .doc(this.currentUser.uid)
+          .onSnapshot(doc => {
+            this.skipSettingsEvent = true;
+            this.userSettings = doc.data();
+          });
+      }
+    }, 1000);
 
     firebase.auth().onAuthStateChanged(user => {
       this.currentUser = user;
@@ -193,7 +251,8 @@ export default {
       }
     });
 
-    if (this.currentUser) {
+    if (!this.socket && this.currentUser) {
+      if (this.socket && this.socket.disconnected) return this.socket.open();
       this.currentUser
         .getIdToken()
         .then(token => {
@@ -247,7 +306,7 @@ export default {
             .then(() => {
               if (firebase.auth().currentUser)
                 firebase.auth().currentUser.reload();
-              this.alertBox.send("success", "Email address verified", 3000);
+              this.alertBox.send("success", "Email address verified", 5000);
             })
             .catch(e => this.alertBox.send("error", e, 10000));
           this.$router.replace("/");

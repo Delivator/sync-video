@@ -72,6 +72,24 @@
               </template>
               <span>{{socket && socket.connected ? `Ping: ${ping}ms` : 'No connection to server'}}</span>
             </v-tooltip>
+
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  icon
+                  @click.left.exact="syncVideo(false)"
+                  @click.shift.left.exact="syncVideo(true)"
+                  v-on="on"
+                >
+                  <v-icon>autorenew</v-icon>
+                </v-btn>
+              </template>
+              <span>
+                Sync own client
+                <br>Shift+Click to sync all clients
+              </span>
+            </v-tooltip>
+
             <v-spacer></v-spacer>
             <v-btn icon @click="toggleTheatre">
               <v-icon>{{theatre ? "zoom_out" : "zoom_in"}}</v-icon>
@@ -98,7 +116,6 @@
                 @ready="playerReady"
                 @playing="onPlay"
                 @paused="onPause"
-                @buffering="onBuffering"
                 @ended="onEnded"
                 @error="youtubeOnError"
                 :player-vars="playerVars"
@@ -185,7 +202,7 @@
                   v-for="video in searchResults"
                   two-line
                   :key="video.id"
-                  :class="darkMode ? 'queue-item-dark' : 'queue-item'"
+                  :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
                 >
                   <img
                     :src="video.thumbnails.medium.url"
@@ -196,7 +213,7 @@
                   <v-list-tile-content>
                     <v-list-tile-title>
                       <a
-                        :class="`no-link-deko ${darkMode ? 'white--text' : 'black--text'}`"
+                        :class="`no-link-deko ${userSettings.darkMode ? 'white--text' : 'black--text'}`"
                         :href="video.url"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -211,7 +228,7 @@
                           :href="video.channel.url"
                           target="_blank"
                           rel="noopener noreferrer"
-                          :class="`no-link-deko ${darkMode ? 'white--text' : 'black--text'}`"
+                          :class="`no-link-deko ${userSettings.darkMode ? 'white--text' : 'black--text'}`"
                         >{{parseYoutubeTitle(video.channel.title)}}</a>
                       </span>
                       &mdash; {{video.description}}
@@ -221,7 +238,7 @@
                     <v-btn
                       icon
                       ripple
-                      @click="addVideo($event, video.id, parseYoutubeTitle(video.title))"
+                      @click="addVideo($event, video.id, parseYoutubeTitle(video.title), video.channel.title, video.description)"
                       class="playlist-add-button"
                     >
                       <v-icon class="playlist-add-icon">playlist_add</v-icon>
@@ -229,7 +246,7 @@
                   </v-list-tile-action>
                 </v-list-tile>
               </v-list>
-              <v-list v-show="queue.length > 0 && !showSearchResults">
+              <v-list two-line v-show="queue.length > 0 && !showSearchResults">
                 <draggable @end="playlistSortEnd($event)" filter="a, i.v-icon">
                   <transition-group type="transition" name="flip-list">
                     <v-list-tile
@@ -238,7 +255,7 @@
                       avatar
                       :uid="video.uid"
                       class="move-cursor"
-                      :class="darkMode ? 'queue-item-dark' : 'queue-item'"
+                      :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
                     >
                       <span class="queue-number">#{{index + 1}}</span>
                       <img
@@ -250,7 +267,7 @@
                       <v-list-tile-content>
                         <v-list-tile-title>
                           <a
-                            :class="darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                            :class="userSettings.darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
                             :href="`https://www.youtube.com/watch?v=${video.videoId}`"
                             target="_blank"
                             rel="noopener noreferrer"
@@ -259,6 +276,12 @@
                             <v-icon small>open_in_new</v-icon>
                           </a>
                         </v-list-tile-title>
+                        <v-list-tile-sub-title>
+                          <span class="text--primary">
+                            {{parseYoutubeTitle(video.source)}}
+                          </span>
+                          &mdash; {{video.description}}
+                        </v-list-tile-sub-title>
                       </v-list-tile-content>
                       <v-spacer></v-spacer>
                       <v-icon
@@ -291,9 +314,7 @@
         <v-btn to="/rooms">My rooms</v-btn>
       </v-flex>
     </v-layout>
-    <v-alert type="info" dismissible v-model="showAlert">
-      Video {{ videoTitle }} added
-    </v-alert>
+    <v-alert type="info" dismissible v-model="showAlert">Video {{ videoTitle }} added</v-alert>
   </v-container>
 </template>
 
@@ -302,8 +323,6 @@
 </style>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/firestore";
 import YouTube from "simple-youtube-api";
 import settings from "../settings.json";
 import draggable from "vuedraggable";
@@ -315,11 +334,10 @@ export default {
   components: {
     draggable
   },
-  props: ["alertBox", "currentUser", "socket", "darkMode"],
+  props: ["alertBox", "currentUser", "socket", "userSettings", "db"],
   data() {
     return {
       roomID: this.$route.params.id || null,
-      db: null,
       roomData: null,
       dialog: false,
       dialog2: false,
@@ -332,7 +350,6 @@ export default {
         videoSource: "",
         videoId: "null"
       },
-      dbListener: null,
       theatre: false,
       users: [],
       preventPlayerEvents: false,
@@ -368,6 +385,7 @@ export default {
       if (event) event.preventDefault();
       if (!this.$refs.title.valid) return this.$refs.title.validate(true);
       if (!this.currentUser || !this.db) return;
+      this.dialog = false;
       this.db
         .collection("rooms")
         .doc(this.roomID)
@@ -499,6 +517,7 @@ export default {
                   .then(currentTime => {
                     let newTime = playerStatus.currentTime;
                     if (
+                      playerStatus.force ||
                       currentTime < newTime - 0.5 ||
                       currentTime > newTime + 0.5
                     ) {
@@ -607,9 +626,6 @@ export default {
         });
       }
     },
-    onBuffering() {
-      console.log("onBuffering");
-    },
     onEnded() {
       this.preventYouTubeSeekEvent = true;
       this.youTubePlayer.seekTo(0.0);
@@ -626,7 +642,7 @@ export default {
     animatePlaylistAddButton(iconElement) {
       if (iconElement.classList.contains("playlist-add-icon")) {
         iconElement.innerHTML = "playlist_add_check";
-        if (this.darkMode) {
+        if (this.userSettings.darkMode) {
           iconElement.classList.add("animate-playlist-add-dark");
         } else {
           iconElement.classList.add("animate-playlist-add-bright");
@@ -638,7 +654,7 @@ export default {
         }, 1000);
       }
     },
-    addVideo(event, videoId, title) {
+    addVideo(event, videoId, title, source = "", description = "") {
       if (event && event.type === "submit") event.preventDefault();
       if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
       if (!videoId) return;
@@ -660,19 +676,27 @@ export default {
           let options = {
             videoSource: "youtube",
             videoId: videoId,
-            title
+            title,
+            source,
+            description
           };
 
-          this.socket.emit("addVideo", this.roomID, options, (err) => {
-            if (err) return this.alertBox.send("error", `Error adding the video: ${err}`);
-            this.alertBox.send("info", `Video ${title} added`, 3000);
+          this.socket.emit("addVideo", this.roomID, options, err => {
+            if (err)
+              return this.alertBox.send(
+                "error",
+                `Error adding the video: ${err}`
+              );
+            this.alertBox.send("info", `Video ${title} added`, 2000);
           });
         }
       };
 
       if (title) {
-        // max title length 100 characters
+        // max title, source, description length
         title = String(title).substring(0, 100);
+        source = String(source).substring(0, 100);
+        description = String(description).substring(0, 250);
         sendUpdate();
       } else {
         title = "YouTube Video";
@@ -681,6 +705,8 @@ export default {
           .then(video => {
             if (!video) return console.error("[YouTube] No video found");
             title = this.parseYoutubeTitle(video.title);
+            source = video.channel.title.substring(0, 100);
+            description = video.description.substring(0, 250);
             sendUpdate();
           })
           .catch(error => {
@@ -759,6 +785,11 @@ export default {
           );
         }
       }
+    },
+    syncVideo(forceSend = false) {
+      if (this.socket && this.socket.connected) {
+        this.socket.emit("getPlayerStatus", this.roomID, true, forceSend);
+      }
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -769,8 +800,6 @@ export default {
   },
   mounted() {
     let roomHistory = [];
-
-    this.db = firebase.firestore();
 
     if (this.db) {
       this.db
@@ -784,12 +813,8 @@ export default {
             this.title = this.roomData.title;
             this.path = querySnapshot.id;
             this.isPublic = this.roomData.public;
-
-            // create local storage key to save room history, if one doesn't exist already
-            if (!localStorage.roomHistory)
-              localStorage.roomHistory = JSON.stringify(roomHistory);
             // load current room history
-            roomHistory = JSON.parse(localStorage.roomHistory);
+            roomHistory = this.userSettings.roomHistory;
             // remove current room from history
             roomHistory = roomHistory.filter(room => room.id !== this.roomID);
             // add current room to the beginning of history
@@ -799,8 +824,8 @@ export default {
             });
             // keep room history < 6
             if (roomHistory.length > 5) roomHistory.pop();
-            // save room history in local storage
-            localStorage.roomHistory = JSON.stringify(roomHistory);
+            // save room history in user settings
+            this.userSettings.roomHistory = roomHistory;
           }
         })
         .catch(e => {

@@ -69,20 +69,16 @@
 </style>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/firestore";
 import { setTimeout } from "timers";
 
 export default {
-  props: ["alertBox", "currentUser"],
+  props: ["alertBox", "currentUser", "db"],
   data() {
     return {
-      db: null,
       rooms: null,
       dialog: null,
       title: "",
       path: "",
-      dbListener: null,
       isPublic: false,
       loading: true,
       rules: {
@@ -146,7 +142,6 @@ export default {
     }
   },
   mounted() {
-    this.db = firebase.firestore();
     this.$root.$on("onAuthStateChanged", user => {
       if (user.displayName) this.title = `${user.displayName}'s Room`;
       if (user.displayName) this.path = this.generateRoomPath(user.displayName);

@@ -181,8 +181,10 @@ io.on("connection", (socket) => {
     if (rooms[room].queue.length > 49) return callback("Max queue length is 50");
 
     if (!videoObj.title) videoObj.title = "Video";
-    // max title length 100 characters
+    // max title, source, description length
     videoObj.title = String(videoObj.title).substring(0, 100);
+    videoObj.source = String(videoObj.source).substring(0, 100);
+    videoObj.description = String(videoObj.description).substring(0, 250);
     // max video id length 11 characters
     videoObj.videoId = String(videoObj.videoId).substring(0, 11);
     // create a unique id for each entry
@@ -233,14 +235,19 @@ io.on("connection", (socket) => {
     io.to(socket).emit("updateQueue", rooms[room].queue);
   });
 
-  socket.on("getPlayerStatus", (room) => {
+  socket.on("getPlayerStatus", (room, force = false, forceAll = false) => {
     if (!room || !rooms || !rooms[room] || !rooms[room].playerStatus) return;
     let newPlayerStatus = { ...{}, ...rooms[room].playerStatus };
     if (newPlayerStatus.status === "play") {
       const timeElapsed = (new Date().getTime() - rooms[room].playerStatus.eventTime) / 1000;
       newPlayerStatus.currentTime += timeElapsed;
     }
-    socket.emit("playerStatusUpdate", newPlayerStatus);
+    newPlayerStatus.force = force;
+    if (forceAll) {
+      io.to(room).emit("playerStatusUpdate", newPlayerStatus);
+    } else {
+      socket.emit("playerStatusUpdate", newPlayerStatus);
+    }
   });
 
   socket.on("skipVideo", (room) => {

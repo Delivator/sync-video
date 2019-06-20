@@ -13,10 +13,10 @@
           >{{ currentUser.displayName || currentUser.email || "Guest" }}</span>.
         </h1>
         <h1 class="display-2 font-weight-bold mb-3" v-else>Welcome to Sync Video!</h1>
-        <v-divider class="divider-margin" v-if="roomHistory && roomHistory.length > 0"></v-divider>
-        <div v-if="roomHistory && roomHistory.length > 0">
+        <v-divider class="divider-margin" v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0"></v-divider>
+        <div v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0">
           <h4 class="display-1">Recent rooms:</h4>
-          <template v-for="room in roomHistory">
+          <template v-for="room in userSettings.roomHistory">
             <v-btn :key="room.id" :to="`/r/${room.id}`">{{room.title}}</v-btn>
           </template>
         </div>
@@ -34,11 +34,10 @@
 
 <script>
 export default {
-  props: ["alertBox", "currentUser"],
+  props: ["alertBox", "currentUser", "userSettings"],
   data() {
     return {
-      showVerify: true,
-      roomHistory: []
+      showVerify: true
     };
   },
   methods: {
@@ -57,14 +56,6 @@ export default {
           .catch(e => this.alertBox.send("error", e, 10000));
       }
     }
-  },
-  mounted() {
-    if (localStorage.roomHistory)
-      this.roomHistory = JSON.parse(localStorage.roomHistory);
-    window.addEventListener("storage", event => {
-      if (event.key === "roomHistory")
-        this.roomHistory = JSON.parse(localStorage.roomHistory);
-    });
   }
 };
 </script>
