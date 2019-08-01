@@ -11,6 +11,7 @@
   "dependencies": {
     "connect-history-api-fallback": "^1.6.0",
     "crypto-js": "^3.1.9-1",
+<<<<<<< Updated upstream
     "express": "^4.16.4",
     "firebase": "^5.10.1",
     "firebase-admin": "^7.3.0",
@@ -28,10 +29,32 @@
     "babel-eslint": "^10.0.1",
     "eslint": "^5.16.0",
     "eslint-plugin-vue": "^5.2.2",
+=======
+    "express": "^4.17.1",
+    "firebase": "^6.3.3",
+    "firebase-admin": "^8.3.0",
+    "simple-youtube-api": "^5.2.1",
+    "socket.io": "^2.2.0",
+    "vue": "^2.6.10",
+    "vue-router": "^3.0.7",
+    "vue-youtube": "^1.3.5",
+    "vuedraggable": "^2.23.0",
+    "vuetify": "^2.0.3"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-babel": "^3.9.2",
+    "@vue/cli-plugin-eslint": "^3.9.2",
+    "@vue/cli-service": "^3.9.3",
+    "babel-eslint": "^10.0.2",
+    "cli-real-favicon": "0.0.8",
+    "eslint": "^6.1.0",
+    "eslint-plugin-vue": "^5.2.3",
+    "sass-loader": "^7.1.0",
+>>>>>>> Stashed changes
     "stylus": "^0.54.5",
     "stylus-loader": "^3.0.2",
-    "vue-cli-plugin-vuetify": "^0.5.0",
+    "vue-cli-plugin-vuetify": "^0.6.1",
     "vue-template-compiler": "^2.6.10",
-    "vuetify-loader": "^1.2.2"
+    "vuetify-loader": "^1.3.0"
   }
 }

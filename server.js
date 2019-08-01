@@ -172,11 +172,47 @@ io.on("connection", (socket) => {
     socket.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
   });
 
+<<<<<<< Updated upstream
   socket.on("sendVideoUpdate", (room, videoObj) => {
     if (!room || !videoObj) return;
     if (!rooms[room] || !rooms[room].queue) {
       rooms[room] = {};
       rooms[room].queue = [];
+=======
+  socket.on("addVideo", (room, videoObj, callback) => {
+    if (!room || !videoObj || !videoObj.videoId) return;
+    if (!rooms[room]) rooms[room] = {};
+    if (!rooms[room].queue) rooms[room].queue = [];
+    if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
+    // max queue size 50 entries
+    if (rooms[room].queue.length > 49) return callback("Max queue length is 50");
+
+    if (!videoObj.title) videoObj.title = "Video";
+    // max title, source, description length
+    videoObj.title = String(videoObj.title).substring(0, 100);
+    videoObj.source = String(videoObj.source).substring(0, 100);
+    videoObj.description = String(videoObj.description).substring(0, 250);
+    // max video id length 11 characters
+    videoObj.videoId = String(videoObj.videoId).substring(0, 11);
+    // create a unique id for each entry
+    videoObj.uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
+    // adding information of the user who added the video
+    videoObj.user = {
+      id: socket.id,
+      displayName: socket.displayName,
+      avatar: socket.avatar || null
+    };
+    // push video object in array and send callback
+    rooms[room].queue.push(videoObj);
+    callback();
+
+
+    if (rooms[room].queue.length === 1) {
+      rooms[room].playerStatus.status = "play";
+      rooms[room].playerStatus.currentTime = 0.0;
+      rooms[room].playerStatus.eventTime = new Date().getTime();
+      io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
+>>>>>>> Stashed changes
     }
     const uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
     rooms[room].queue.push({ ...{ uid }, ...videoObj });

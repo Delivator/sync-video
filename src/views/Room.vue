@@ -71,6 +71,27 @@
               </template>
               <span>{{socket && socket.connected ? 'Connected' : 'Not Connected'}}</span>
             </v-tooltip>
+<<<<<<< Updated upstream
+=======
+
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on }">
+                <v-btn
+                  icon
+                  @click.left.exact="syncVideo(false)"
+                  @click.shift.left.exact="syncVideo(true)"
+                  v-on="on"
+                >
+                  <v-icon>autorenew</v-icon>
+                </v-btn>
+              </template>
+              <span>
+                Sync own client
+                <br />Shift+Click to sync all clients
+              </span>
+            </v-tooltip>
+
+>>>>>>> Stashed changes
             <v-spacer></v-spacer>
             <v-btn icon @click="toggleTheatre">
               <v-icon>{{theatre ? "zoom_out" : "zoom_in"}}</v-icon>
@@ -125,7 +146,7 @@
                 :color="user.isMe ? 'primary' : ''"
               >
                 <v-avatar v-if="user.avatar">
-                  <img :src="user.avatar" alt="Avatar">
+                  <img :src="user.avatar" alt="Avatar" />
                 </v-avatar>
                 {{user.displayName}}
               </v-chip>
@@ -166,7 +187,7 @@
                 </template>
                 <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
               </v-text-field>
-              <input type="submit" class="hide">
+              <input type="submit" class="hide" />
             </v-form>
             <div
               v-if="queue && queue.length > 0 || showResults && searchResults.length > 0"
@@ -184,7 +205,7 @@
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
-                  >
+                  />
                   <v-list-tile-content>
                     <v-list-tile-title>
                       <a
@@ -208,6 +229,7 @@
                   >play_arrow</v-icon>
                 </v-list-tile>
               </v-list>
+<<<<<<< Updated upstream
               <v-list v-else>
                 <v-list-tile v-for="video in queue" :key="video.uid" avatar>
                   <img
@@ -232,6 +254,55 @@
                   <v-icon @click="pushVideo(video.uid)" color="success">play_arrow</v-icon>
                   <v-icon @click="removeVideo(video.uid)" color="error">close</v-icon>
                 </v-list-tile>
+=======
+              <v-list two-line v-show="queue.length > 0 && !showSearchResults">
+                <draggable @end="playlistSortEnd($event)" filter="a, i.v-icon">
+                  <transition-group type="transition" name="flip-list">
+                    <v-list-tile
+                      v-for="(video, index) in queue"
+                      :key="video.uid"
+                      avatar
+                      :uid="video.uid"
+                      class="move-cursor"
+                      :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
+                    >
+                      <span class="queue-number">#{{index + 1}}</span>
+                      <img
+                        :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                        height="50"
+                        width="88.889"
+                        class="playlist-thumbnail"
+                      />
+                      <v-list-tile-content>
+                        <v-list-tile-title>
+                          <a
+                            :class="userSettings.darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
+                            :href="`https://www.youtube.com/watch?v=${video.videoId}`"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {{video.title}}
+                            <v-icon small>open_in_new</v-icon>
+                          </a>
+                          <span class="queue-user grey--text text--lighten--1"> ● Added by {{video.user.displayName}}</span>
+                        </v-list-tile-title>
+                        <v-list-tile-sub-title>
+                          <span class="text--primary">{{parseYoutubeTitle(video.source)}}</span>
+                          &mdash; {{video.description}}
+                        </v-list-tile-sub-title>
+                      </v-list-tile-content>
+                      <v-spacer></v-spacer>
+                      <v-icon
+                        v-if="index !== 0"
+                        @click="moveVideo(video.uid, 0)"
+                        color="success"
+                        class="no-select"
+                      >play_arrow</v-icon>
+                      <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
+                    </v-list-tile>
+                  </transition-group>
+                </draggable>
+>>>>>>> Stashed changes
               </v-list>
             </div>
             <div v-else>
