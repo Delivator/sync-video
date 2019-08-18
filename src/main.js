@@ -1,15 +1,13 @@
-import Vue from "vue"
-import firebase from "firebase/app"
-import "./plugins/vuetify"
-import App from "./App.vue"
-import router from "./router"
-import firebaseConfig from "./firebase.json"
+import Vue from 'vue'
+import App from './App.vue'
+import router from './router'
+import './registerServiceWorker'
+import vuetify from './plugins/vuetify';
 
 Vue.config.productionTip = false
 
-firebase.initializeApp(firebaseConfig.config);
-
 new Vue({
   router,
+  vuetify,
   render: h => h(App)
 }).$mount('#app')

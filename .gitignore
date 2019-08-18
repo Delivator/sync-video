@@ -18,8 +18,4 @@ yarn-error.log*
 *.ntvs*
 *.njsproj
 *.sln
-*.sw*
-src/firebase.json
-serviceAccountKey.json
-src/settings.json
-src/faviconData.json
+*.sw?
