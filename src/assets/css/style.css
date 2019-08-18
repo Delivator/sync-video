@@ -1,0 +1,158 @@
+html {
+  overflow-y: auto;
+}
+
+.v-toolbar__title a, .no-link-deko {
+  text-decoration: none;
+}
+
+.avatar {
+  border-radius: 100%;
+  cursor: pointer;
+}
+
+#email:focus {
+  outline: 0;
+}
+
+.hide {
+  display: none;
+}
+
+.alert {
+  position: fixed;
+  width: 100%;
+  z-index: 2;
+}
+
+#playerFlex {
+  transition: 300ms max-width, 300ms flex-basis;
+  transition-timing-function: cubic-bezier(0, 1, 0.5, 1);
+}
+
+.divider-margin {
+  margin: 1rem 0;
+}
+
+.user-list {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.user-list::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.user-list::-webkit-scrollbar-button {
+  width: 0px;
+  height: 0px;
+}
+
+.user-list::-webkit-scrollbar-thumb {
+  background: #e1e1e1;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+
+.user-list::-webkit-scrollbar-thumb:hover {
+  background: #ffffff;
+}
+
+.user-list::-webkit-scrollbar-thumb:active {
+  background: #303030;
+}
+
+.user-list::-webkit-scrollbar-track {
+  background: #666666;
+  border: 0px none #ffffff;
+  border-radius: 50px;
+}
+
+.user-list::-webkit-scrollbar-track:hover {
+  background: #666666;
+}
+
+.user-list::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.playlist-thumbnail {
+  margin-right: 1em;
+}
+
+.no-select {
+  user-select: none;
+}
+
+.animate-playlist-add-dark {
+  animation: playlist-add-dark 1.5s;
+}
+
+.animate-playlist-add-bright {
+  animation: playlist-add-birght 1.5s;
+}
+
+@keyframes playlist-add-dark {
+  0% {
+    color: #4caf50;
+  }
+  100% {
+    color: #fff;
+  }
+}
+
+@keyframes playlist-add-bright {
+  0% {
+    color: #4caf50;
+  }
+  100% {
+    color: #000;
+  }
+}
+
+.flip-list-move {
+  transition: transform 0.3s;
+}
+
+.flip-list-enter-active, .flip-list-leave-active {
+  transition: 500ms cubic-bezier(0.59, 0.12, 0.34, 0.95);
+  transition-property: opacity, transform;
+}
+
+.flip-list-enter {
+  opacity: 0;
+  transform: translateX(50px) scaleY(0.5);
+}
+
+.flip-list-enter-to {
+  opacity: 1;
+  transform: translateX(0) scaleY(1);
+}
+
+.flip-list-leave-to {
+  opacity: 0;
+  transform: translateX(50px);
+  transform-origin: center top;
+}
+
+.no-move {
+  transition: transform 0s;
+}
+
+.move-cursor {
+  cursor: move;
+}
+
+.queue-number {
+  margin-right: 1em;
+}
+
+.queue-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.queue-item-dark:hover {
+  background: rgba(255, 255, 255, 0.08);
+}

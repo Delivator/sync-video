@@ -1,0 +1,5 @@
+{
+  "nodeServerPort": "NODE_SERVER_PORT",
+  "socketUrl": "http://URL_TO_YOUR_NODE_SERVER/",
+  "youTubeAPIKey": "YOUTUBE_API_KEY"
+}
