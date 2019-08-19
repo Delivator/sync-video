@@ -156,3 +156,7 @@ html {
 .queue-item-dark:hover {
   background: rgba(255, 255, 255, 0.08);
 }
+
+.clickable {
+  cursor: pointer;
+}

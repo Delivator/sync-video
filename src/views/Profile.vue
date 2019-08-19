@@ -30,12 +30,13 @@
             <v-toolbar-title class="headline">Edit Your Profile</v-toolbar-title>
             <v-spacer></v-spacer>
             <v-tooltip left>
-              <template #activator="data">
+              <template v-slot:activator="{ on }">
                 <v-avatar
                   v-if="currentUser && currentUser.email"
                   size="45"
-                  v-on="data.on"
+                  v-on="on"
                   @click="openGravatar"
+                  class="clickable"
                 >
                   <img :src="getGravatarUrl(currentUser.email, 45)" alt="avatar">
                 </v-avatar>
@@ -156,7 +157,7 @@ export default {
     },
     changeEmail(event) {
       if (event) event.preventDefault();
-      if (!this.currentUser || !this.email || !this.$refs.email.valid) return;
+      if (!this.currentUser || !this.email || !this.$refs.email.valid || !this.emailChanged) return;
       this.currentUser
         .updateEmail(this.email)
         .then(() => this.alertBox.send("success", "E-mail address changed"))
@@ -167,7 +168,7 @@ export default {
     },
     changeDisplayName(event) {
       if (event) event.preventDefault();
-      if (!this.currentUser) return;
+      if (!this.currentUser || !this.displayNameChanged) return;
       if (!this.$refs.displayName.valid) {
         return this.$refs.displayName.validate(true);
       }

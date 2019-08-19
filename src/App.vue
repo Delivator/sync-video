@@ -11,47 +11,49 @@
       <v-btn v-if="!currentUser" raised to="/login">
         <span>Login</span>
       </v-btn>
-      <v-menu offset-y>
-        <v-avatar v-if="currentUser && currentUser.email" v-slot:activator="{ on }">
-          <img :src="getGravatarUrl(currentUser.email)" alt="avatar">
-        </v-avatar>
-        <v-btn v-else fab small v-slot:activator="{ on }">
-          <v-icon>settings</v-icon>
-        </v-btn>
+      <v-menu offset-y v-if="currentUser">
+        <template v-slot:activator="{ on }">
+          <v-avatar v-show="currentUser && currentUser.email" v-on="on" class="clickable">
+            <img :src="getGravatarUrl(currentUser.email)" alt="avatar" />
+          </v-avatar>
+          <v-btn v-show="currentUser && !currentUser.email" small fab v-on="on">
+            <v-icon>settings</v-icon>
+          </v-btn>
+        </template>
         <v-list>
-          <v-list-tile to="/profile" v-if="currentUser">
-            <v-list-tile-action>
+          <v-list-item to="/profile" v-if="currentUser">
+            <v-list-item-action>
               <v-icon>person</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>Profile</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
-          <v-list-tile to="/rooms" v-if="currentUser">
-            <v-list-tile-action>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>Profile</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          <v-list-item to="/rooms" v-if="currentUser">
+            <v-list-item-action>
               <v-icon>menu</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>Rooms</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
-          <v-list-tile @click="userSettings.darkMode = !userSettings.darkMode">
-            <v-list-tile-action>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>Rooms</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
+          <v-list-item @click="userSettings.darkMode = !userSettings.darkMode">
+            <v-list-item-action>
               <v-icon>invert_colors</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>Toggle dark mode</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>Toggle dark mode</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
           <v-divider v-if="currentUser"></v-divider>
-          <v-list-tile @click="signOut" v-if="currentUser">
-            <v-list-tile-action>
+          <v-list-item @click="signOut" v-if="currentUser">
+            <v-list-item-action>
               <v-icon>exit_to_app</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title>Log out</v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title>Log out</v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
         </v-list>
       </v-menu>
     </v-app-bar>
@@ -156,7 +158,8 @@ export default {
   watch: {
     userSettings: {
       handler(newUserSettings) {
-        if (this.skipSettingsEvent) return this.skipSettingsEvent = false;
+        this.$vuetify.theme.dark = newUserSettings.darkMode;
+        if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
         localStorage.userSettings = JSON.stringify(newUserSettings);
         if (!this.db || !this.currentUser) return;
         this.db

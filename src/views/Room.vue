@@ -53,7 +53,7 @@
         <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
       </v-flex>
     </v-layout>
-    <v-layout v-else text-center justify-center align-center wrap row>
+    <v-layout v-else justify-center align-center wrap row>
       <v-flex
         v-if="roomData"
         :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl8'"
@@ -105,7 +105,7 @@
           <v-card-text ref="player">
             <v-responsive :aspect-ratio="16/9" max-height="100vh">
               <v-container v-if="queue.length < 1" fluid fill-height>
-                <v-layout align-center justify-center>
+                <v-layout text-center align-center justify-center>
                   <v-flex xs12>
                     <h1>No videos in queue</h1>
                   </v-flex>
@@ -198,7 +198,7 @@
             >
               <h6 class="title" v-if="showSearchResults">Search results:</h6>
               <v-list two-line v-show="showSearchResults">
-                <v-list-tile
+                <v-list-item
                   v-for="video in searchResults"
                   two-line
                   :key="video.id"
@@ -210,8 +210,8 @@
                     width="88.889"
                     class="playlist-thumbnail"
                   >
-                  <v-list-tile-content>
-                    <v-list-tile-title>
+                  <v-list-item-content>
+                    <v-list-item-title>
                       <a
                         :class="`no-link-deko ${userSettings.darkMode ? 'white--text' : 'black--text'}`"
                         :href="video.url"
@@ -221,8 +221,8 @@
                         {{parseYoutubeTitle(video.title)}}
                         <v-icon small>open_in_new</v-icon>
                       </a>
-                    </v-list-tile-title>
-                    <v-list-tile-sub-title>
+                    </v-list-item-title>
+                    <v-list-item-subtitle>
                       <span class="text--primary">
                         <a
                           :href="video.channel.url"
@@ -232,9 +232,9 @@
                         >{{parseYoutubeTitle(video.channel.title)}}</a>
                       </span>
                       &mdash; {{video.description}}
-                    </v-list-tile-sub-title>
-                  </v-list-tile-content>
-                  <v-list-tile-action>
+                    </v-list-item-subtitle>
+                  </v-list-item-content>
+                  <v-list-item-action>
                     <v-btn
                       icon
                       ripple
@@ -243,16 +243,15 @@
                     >
                       <v-icon class="playlist-add-icon">playlist_add</v-icon>
                     </v-btn>
-                  </v-list-tile-action>
-                </v-list-tile>
+                  </v-list-item-action>
+                </v-list-item>
               </v-list>
               <v-list two-line v-show="queue.length > 0 && !showSearchResults">
                 <draggable @end="playlistSortEnd($event)" filter="a, i.v-icon">
                   <transition-group type="transition" name="flip-list">
-                    <v-list-tile
+                    <v-list-item
                       v-for="(video, index) in queue"
                       :key="video.uid"
-                      avatar
                       :uid="video.uid"
                       class="move-cursor"
                       :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
@@ -264,8 +263,8 @@
                         width="88.889"
                         class="playlist-thumbnail"
                       >
-                      <v-list-tile-content>
-                        <v-list-tile-title>
+                      <v-list-item-content>
+                        <v-list-item-title>
                           <a
                             :class="userSettings.darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
                             :href="`https://www.youtube.com/watch?v=${video.videoId}`"
@@ -275,14 +274,14 @@
                             {{video.title}}
                             <v-icon small>open_in_new</v-icon>
                           </a>
-                        </v-list-tile-title>
-                        <v-list-tile-sub-title>
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
                           <span class="text--primary">
                             {{parseYoutubeTitle(video.source)}}
                           </span>
                           &mdash; {{video.description}}
-                        </v-list-tile-sub-title>
-                      </v-list-tile-content>
+                        </v-list-item-subtitle>
+                      </v-list-item-content>
                       <v-spacer></v-spacer>
                       <v-icon
                         v-if="index !== 0"
@@ -291,7 +290,7 @@
                         class="no-select"
                       >play_arrow</v-icon>
                       <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
-                    </v-list-tile>
+                    </v-list-item>
                   </transition-group>
                 </draggable>
               </v-list>
@@ -773,14 +772,14 @@ export default {
       ).body.textContent;
     },
     playlistSortEnd(event) {
+      console.log("playlistSortEnd", event);
       if (event && event.type === "end") {
         if (
           event.item &&
-          event.item.firstChild &&
-          event.item.firstChild.getAttribute("uid")
+          event.item.getAttribute("uid")
         ) {
           this.moveVideo(
-            event.item.firstChild.getAttribute("uid"),
+            event.item.getAttribute("uid"),
             event.newIndex
           );
         }
