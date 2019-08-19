@@ -11,13 +11,19 @@ const { MD5 } = require("crypto-js");
 
 // Check for settings files
 if (!fs.existsSync("src/settings.json")) {
-  console.log("src/settings.json not found, (See https://github.com/Delivator/sync-video#project-setup 5.)");
+  console.log(
+    "src/settings.json not found, (See https://github.com/Delivator/sync-video#project-setup 5.)"
+  );
   process.exit(1);
 } else if (!fs.existsSync("src/firebase.json")) {
-  console.log("src/firebase.json not found, (See https://github.com/Delivator/sync-video#project-setup 6.)");
+  console.log(
+    "src/firebase.json not found, (See https://github.com/Delivator/sync-video#project-setup 6.)"
+  );
   process.exit(2);
 } else if (!fs.existsSync("serviceAccountKey.json")) {
-  console.log("serviceAccountKey.json not found, (See https://github.com/Delivator/sync-video#project-setup 7.)");
+  console.log(
+    "serviceAccountKey.json not found, (See https://github.com/Delivator/sync-video#project-setup 7.)"
+  );
   process.exit(3);
 }
 
@@ -36,13 +42,16 @@ app.use(history());
 app.use(express.static("./dist"));
 
 function generateUsername() {
-  const animals = "🐵🐒🦍🐶🐕🐩🐺🦊🦝🐱🐈🦁🐯🐅🐆🐴🐎🦄🦓🦌🐮🐂🐃🐄🐷🐖🐗🐽🐏🐑🐐🐪🐫🦙🦒🐘🦏🦛🐭🐁🐀🐹🐰🐇🦔🦇🐻🐨🐼🦘🦡🦃🐔🐓🐣🐤🐥🐦🐧🕊🦅🦆🦢🦉🦚🦜🐸🐊🐢🦎🐍🐲🐉🦕🦖🐳🐋🐬🐟🐠🐡🦈🐙🐚🦀🦞🦐🦑🐌🦋🐛🐜🐝🐞🦗🕷🦂🦟";
+  const animals =
+    "🐵🐒🦍🐶🐕🐩🐺🦊🦝🐱🐈🦁🐯🐅🐆🐴🐎🦄🦓🦌🐮🐂🐃🐄🐷🐖🐗🐽🐏🐑🐐🐪🐫🦙🦒🐘🦏🦛🐭🐁🐀🐹🐰🐇🦔🦇🐻🐨🐼🦘🦡🦃🐔🐓🐣🐤🐥🐦🐧🕊🦅🦆🦢🦉🦚🦜🐸🐊🐢🦎🐍🐲🐉🦕🦖🐳🐋🐬🐟🐠🐡🦈🐙🐚🦀🦞🦐🦑🐌🦋🐛🐜🐝🐞🦗🕷🦂🦟";
   const animal = [...animals];
   return `Anonymous ${animal[Math.floor(Math.random() * animal.length)]}`;
 }
 
 function getGravatarUrl(email) {
-  return `https://www.gravatar.com/avatar/${MD5(email.trim().toLowerCase()).toString()}`;
+  return `https://www.gravatar.com/avatar/${MD5(
+    email.trim().toLowerCase()
+  ).toString()}`;
 }
 
 function getRoomUsers(room) {
@@ -63,14 +72,20 @@ function getRoomUsers(room) {
 }
 
 // https://stackoverflow.com/a/7180095/6287225
-Array.prototype.move2 = function (pos1, pos2) {
+Array.prototype.move2 = function(pos1, pos2) {
   // local variables
   var i, tmp;
   // cast input parameters to integers
   pos1 = parseInt(pos1, 10);
   pos2 = parseInt(pos2, 10);
   // if positions are different and inside array
-  if (pos1 !== pos2 && 0 <= pos1 && pos1 <= this.length && 0 <= pos2 && pos2 <= this.length) {
+  if (
+    pos1 !== pos2 &&
+    0 <= pos1 &&
+    pos1 <= this.length &&
+    0 <= pos2 &&
+    pos2 <= this.length
+  ) {
     // save element from position 1
     tmp = this[pos1];
     // move element down and shift other elements up
@@ -88,23 +103,27 @@ Array.prototype.move2 = function (pos1, pos2) {
     // put element from position 1 to destination
     this[pos2] = tmp;
   }
-}
+};
 
 // Handle if the dist directory doesn't exist (App hasn't been build yet)
 app.get("*", (req, res) => {
   if (!fs.existsSync("./dist")) {
     res.writeHead(404, { "Content-Type": "text/html" });
-    res.end("404: Not found<br>If your the host, make sure you ran <strong>npm run build</strong> before starting the server.");
+    res.end(
+      "404: Not found<br>If your the host, make sure you ran <strong>npm run build</strong> before starting the server."
+    );
   } else {
     res.status(404).send("404: Not found");
   }
 });
 
-io.on("connection", (socket) => {
+io.on("connection", socket => {
   const token = socket.handshake.query.token;
 
   if (token) {
-    admin.auth().verifyIdToken(token)
+    admin
+      .auth()
+      .verifyIdToken(token)
       .then(user => {
         if (user.email) socket.avatar = getGravatarUrl(user.email);
         socket.displayName = user.name ? user.name : generateUsername();
@@ -117,19 +136,24 @@ io.on("connection", (socket) => {
     socket.displayName = generateUsername();
   }
 
-  console.log(`[+] ${io.engine.clientsCount} client${io.engine.clientsCount > 1 ? "s" : ""} connected`);
+  console.log(
+    `[+] ${io.engine.clientsCount} client${
+      io.engine.clientsCount > 1 ? "s" : ""
+    } connected`
+  );
 
   // when a user joins a room
-  socket.on("joinRoom", (room) => {
+  socket.on("joinRoom", room => {
     if (!room || room === "") return;
     socket.join(room);
     setTimeout(() => {
       io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
-      if (rooms[room] && rooms[room].queue) socket.emit("updateQueue", rooms[room].queue);
+      if (rooms[room] && rooms[room].queue)
+        socket.emit("updateQueue", rooms[room].queue);
     }, 0);
   });
 
-  socket.on("leaveRoom", (room) => {
+  socket.on("leaveRoom", room => {
     if (!room || room === "") return;
     socket.leave(room);
     io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
@@ -146,9 +170,11 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("authenticate", (token) => {
+  socket.on("authenticate", token => {
     if (!token || token === "") return;
-    admin.auth().verifyIdToken(token)
+    admin
+      .auth()
+      .verifyIdToken(token)
       .then(user => {
         if (user.email) socket.avatar = getGravatarUrl(user.email);
         if (user.name) socket.displayName = user.name;
@@ -178,7 +204,8 @@ io.on("connection", (socket) => {
     if (!rooms[room].queue) rooms[room].queue = [];
     if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
     // max queue size 50 entries
-    if (rooms[room].queue.length > 49) return callback("Max queue length is 50");
+    if (rooms[room].queue.length > 49)
+      return callback("Max queue length is 50");
 
     if (!videoObj.title) videoObj.title = "Video";
     // max title, source, description length
@@ -188,11 +215,12 @@ io.on("connection", (socket) => {
     // max video id length 11 characters
     videoObj.videoId = String(videoObj.videoId).substring(0, 11);
     // create a unique id for each entry
-    videoObj.uid = MD5(videoObj.videoId + new Date().getTime().toString()).toString();
+    videoObj.uid = MD5(
+      videoObj.videoId + new Date().getTime().toString()
+    ).toString();
     // push video object in array and send callback
     rooms[room].queue.push(videoObj);
     callback();
-
 
     if (rooms[room].queue.length === 1) {
       rooms[room].playerStatus.status = "play";
@@ -230,7 +258,7 @@ io.on("connection", (socket) => {
     io.to(room).emit("updateQueue", rooms[room].queue);
   });
 
-  socket.on("getQueue", (room) => {
+  socket.on("getQueue", room => {
     if (!room || !rooms || !rooms[room]) return;
     io.to(socket).emit("updateQueue", rooms[room].queue);
   });
@@ -239,7 +267,8 @@ io.on("connection", (socket) => {
     if (!room || !rooms || !rooms[room] || !rooms[room].playerStatus) return;
     let newPlayerStatus = { ...{}, ...rooms[room].playerStatus };
     if (newPlayerStatus.status === "play") {
-      const timeElapsed = (new Date().getTime() - rooms[room].playerStatus.eventTime) / 1000;
+      const timeElapsed =
+        (new Date().getTime() - rooms[room].playerStatus.eventTime) / 1000;
       newPlayerStatus.currentTime += timeElapsed;
     }
     newPlayerStatus.force = force;
@@ -250,10 +279,21 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("skipVideo", (room) => {
-    if (!room || !rooms || !rooms[room] || !rooms[room].queue || !rooms[room].playerStatus) return;
+  socket.on("skipVideo", room => {
+    if (
+      !room ||
+      !rooms ||
+      !rooms[room] ||
+      !rooms[room].queue ||
+      !rooms[room].playerStatus
+    )
+      return;
     // only skip videos every 500ms to prevent double skipping
-    if (rooms[room].lastRemove && rooms[room].lastRemove + 500 > new Date().getTime()) return;
+    if (
+      rooms[room].lastRemove &&
+      rooms[room].lastRemove + 500 > new Date().getTime()
+    )
+      return;
 
     if (rooms[room].queue.length > 0) {
       rooms[room].lastRemove = new Date().getTime();

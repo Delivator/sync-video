@@ -2,7 +2,10 @@
   <v-app>
     <v-app-bar app>
       <v-toolbar-title class="headline text-uppercase">
-        <router-link to="/" :class="userSettings.darkMode ? 'white--text' : 'black--text'">
+        <router-link
+          to="/"
+          :class="userSettings.darkMode ? 'white--text' : 'black--text'"
+        >
           <span>SYNC-VIDEO</span>
           <span class="font-weight-light">.ME</span>
         </router-link>
@@ -13,7 +16,11 @@
       </v-btn>
       <v-menu offset-y v-if="currentUser">
         <template v-slot:activator="{ on }">
-          <v-avatar v-show="currentUser && currentUser.email" v-on="on" class="clickable">
+          <v-avatar
+            v-show="currentUser && currentUser.email"
+            v-on="on"
+            class="clickable"
+          >
             <img :src="getGravatarUrl(currentUser.email)" alt="avatar" />
           </v-avatar>
           <v-btn v-show="currentUser && !currentUser.email" small fab v-on="on">
@@ -66,7 +73,8 @@
           :type="alert.type"
           dismissible
           transition="slide-y-transition"
-        >{{ alert.text }}</v-alert>
+          >{{ alert.text }}</v-alert
+        >
       </div>
       <router-view
         :alertBox="alertBox"
@@ -85,14 +93,16 @@
             href="https://github.com/Delivator"
             target="_blank"
             rel="noopener noreferrer"
-          >Delivator</a>
+            >Delivator</a
+          >
           &ndash;
           <a
             :class="userSettings.darkMode ? 'white--text' : 'black--text'"
             href="https://github.com/Delivator/sync-video"
             target="_blank"
             rel="noopener noreferrer"
-          >Source code</a>
+            >Source code</a
+          >
         </v-flex>
       </v-layout>
     </v-footer>

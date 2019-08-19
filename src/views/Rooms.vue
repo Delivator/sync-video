@@ -37,7 +37,11 @@
     </v-dialog>
     <v-layout v-if="loading" align-center justify-center row text-center>
       <v-flex xs12>
-        <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+        <v-progress-circular
+          :size="50"
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
       </v-flex>
     </v-layout>
     <v-layout v-else justify-center text-center>
@@ -46,12 +50,16 @@
           <div v-if="rooms">
             <h2 class="display-3">Your rooms:</h2>
             <template v-for="room in rooms">
-              <v-btn :key="room.id" :to="`/r/${room.id}`">{{room.data().title}}</v-btn>
+              <v-btn :key="room.id" :to="`/r/${room.id}`">{{
+                room.data().title
+              }}</v-btn>
             </template>
             <v-divider class="divider-margin"></v-divider>
           </div>
           <div v-else>
-            <h4 class="display-1">You don't have any rooms yet, click here to create one.</h4>
+            <h4 class="display-1">
+              You don't have any rooms yet, click here to create one.
+            </h4>
           </div>
           <v-btn color="success" @click="dialog = true">Add Room</v-btn>
         </div>

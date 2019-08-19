@@ -24,7 +24,12 @@
           <v-card-actions>
             <v-btn color="error" @click="dialog = false">Cancel</v-btn>
             <v-spacer></v-spacer>
-            <v-btn color="success" @click="reauthenticateAndChangePassword" type="submit">Login</v-btn>
+            <v-btn
+              color="success"
+              @click="reauthenticateAndChangePassword"
+              type="submit"
+              >Login</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-form>
@@ -34,7 +39,9 @@
         <v-form>
           <v-card class="elevation-12">
             <v-toolbar dark color="primary">
-              <v-toolbar-title>{{ email && actionCode ? "Reset Password" : "Change Password" }}</v-toolbar-title>
+              <v-toolbar-title>{{
+                email && actionCode ? "Reset Password" : "Change Password"
+              }}</v-toolbar-title>
             </v-toolbar>
             <v-card-text>
               <v-form @submit="submit">
@@ -58,24 +65,33 @@
                 <h6
                   class="title"
                   v-if="!((email && actionCode) || currentUser)"
-                >You need to be logged in to change your password.</h6>
+                >
+                  You need to be logged in to change your password.
+                </h6>
               </v-form>
             </v-card-text>
             <v-card-actions>
-              <v-btn to="/" outline v-if="!((email && actionCode) || currentUser)">Go Back</v-btn>
+              <v-btn
+                to="/"
+                outline
+                v-if="!((email && actionCode) || currentUser)"
+                >Go Back</v-btn
+              >
               <v-spacer></v-spacer>
               <v-btn
                 @click="confirm"
                 color="success"
                 v-if="email && actionCode"
                 type="submit"
-              >Confirm</v-btn>
+                >Confirm</v-btn
+              >
               <v-btn
                 @click="changePassword"
                 color="success"
                 v-if="currentUser && !(email || actionCode)"
                 type="submit"
-              >Change</v-btn>
+                >Change</v-btn
+              >
             </v-card-actions>
           </v-card>
         </v-form>

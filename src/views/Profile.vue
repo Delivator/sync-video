@@ -7,7 +7,11 @@
             <span class="headline">Login</span>
           </v-card-title>
           <v-card-text>
-            <v-text-field v-model="loginEmail" label="Email" :rules="[rules.required]"></v-text-field>
+            <v-text-field
+              v-model="loginEmail"
+              label="Email"
+              :rules="[rules.required]"
+            ></v-text-field>
             <v-text-field
               v-model="loginPassword"
               label="Password"
@@ -18,7 +22,12 @@
           <v-card-actions>
             <v-btn color="error" @click="dialog = false">Cancel</v-btn>
             <v-spacer></v-spacer>
-            <v-btn color="success" @click="reauthenticateAndChangeEmail" type="submit">Login</v-btn>
+            <v-btn
+              color="success"
+              @click="reauthenticateAndChangeEmail"
+              type="submit"
+              >Login</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-form>
@@ -27,7 +36,9 @@
       <v-flex xs12 sm9 md9 lg7 xl4>
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title class="headline">Edit Your Profile</v-toolbar-title>
+            <v-toolbar-title class="headline"
+              >Edit Your Profile</v-toolbar-title
+            >
             <v-spacer></v-spacer>
             <v-tooltip left>
               <template v-slot:activator="{ on }">
@@ -38,7 +49,10 @@
                   @click="openGravatar"
                   class="clickable"
                 >
-                  <img :src="getGravatarUrl(currentUser.email, 45)" alt="avatar">
+                  <img
+                    :src="getGravatarUrl(currentUser.email, 45)"
+                    alt="avatar"
+                  />
                 </v-avatar>
               </template>
               <span>Edit on Gravatar</span>
@@ -62,9 +76,10 @@
                     slot="append"
                     v-if="displayNameChanged"
                     @click="changeDisplayName"
-                  >check</v-icon>
+                    >check</v-icon
+                  >
                 </v-text-field>
-                <input type="submit" class="hide">
+                <input type="submit" class="hide" />
               </v-form>
               <v-form @submit="changeEmail">
                 <v-text-field
@@ -82,19 +97,24 @@
                     slot="append"
                     v-if="emailChanged"
                     @click="changeEmail"
-                  >check</v-icon>
+                    >check</v-icon
+                  >
                 </v-text-field>
-                <input type="submit" class="hide">
+                <input type="submit" class="hide" />
               </v-form>
             </div>
             <div v-else>
-              <h6 class="title">You need to be logged in to edit your profile.</h6>
+              <h6 class="title">
+                You need to be logged in to edit your profile.
+              </h6>
             </div>
           </v-card-text>
           <v-card-actions>
             <v-btn v-if="!currentUser" to="/login" outline>Login</v-btn>
             <v-spacer></v-spacer>
-            <v-btn v-if="currentUser" to="/reset-password">Change Password</v-btn>
+            <v-btn v-if="currentUser" to="/reset-password"
+              >Change Password</v-btn
+            >
           </v-card-actions>
         </v-card>
       </v-flex>
@@ -157,7 +177,13 @@ export default {
     },
     changeEmail(event) {
       if (event) event.preventDefault();
-      if (!this.currentUser || !this.email || !this.$refs.email.valid || !this.emailChanged) return;
+      if (
+        !this.currentUser ||
+        !this.email ||
+        !this.$refs.email.valid ||
+        !this.emailChanged
+      )
+        return;
       this.currentUser
         .updateEmail(this.email)
         .then(() => this.alertBox.send("success", "E-mail address changed"))

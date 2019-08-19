@@ -19,10 +19,21 @@
               <v-checkbox v-model="isPublic" label="Public"></v-checkbox>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="error" outline @click="dialog = false">Cancel</v-btn>
+              <v-btn color="error" outline @click="dialog = false"
+                >Cancel</v-btn
+              >
               <v-spacer></v-spacer>
-              <v-btn color="error" @click="dialog = false; dialog2 = true">Delete</v-btn>
-              <v-btn color="success" @click="updateRoom" type="submit">Save</v-btn>
+              <v-btn
+                color="error"
+                @click="
+                  dialog = false;
+                  dialog2 = true;
+                "
+                >Delete</v-btn
+              >
+              <v-btn color="success" @click="updateRoom" type="submit"
+                >Save</v-btn
+              >
             </v-card-actions>
           </v-card>
         </v-form>
@@ -36,13 +47,24 @@
             <v-card-text>
               <h6 class="title font-weight-light">
                 Are you sure you want the delete
-                <span class="font-weight-bold">{{roomData.title}}</span>?
+                <span class="font-weight-bold">{{ roomData.title }}</span
+                >?
               </h6>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="error" outline @click="dialog2 = false; dialog = true">Cancel</v-btn>
+              <v-btn
+                color="error"
+                outline
+                @click="
+                  dialog2 = false;
+                  dialog = true;
+                "
+                >Cancel</v-btn
+              >
               <v-spacer></v-spacer>
-              <v-btn color="error" @click="deleteRoom" type="submit">Delete</v-btn>
+              <v-btn color="error" @click="deleteRoom" type="submit"
+                >Delete</v-btn
+              >
             </v-card-actions>
           </v-card>
         </v-form>
@@ -50,27 +72,39 @@
     </template>
     <v-layout v-if="loading" align-center justify-center row text-center>
       <v-flex xs12>
-        <v-progress-circular :size="50" indeterminate color="primary"></v-progress-circular>
+        <v-progress-circular
+          :size="50"
+          indeterminate
+          color="primary"
+        ></v-progress-circular>
       </v-flex>
     </v-layout>
     <v-layout v-else justify-center align-center wrap row>
       <v-flex
         v-if="roomData"
-        :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl8'"
+        :class="
+          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl8'
+        "
         id="playerFlex"
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>{{this.roomData.title}}</v-toolbar-title>
+            <v-toolbar-title>{{ this.roomData.title }}</v-toolbar-title>
             <v-tooltip bottom>
               <template #activator="data">
                 <h5
                   v-on="data.on"
                   class="headline"
                   :class="socket.connected ? pingColor : 'red--text'"
-                >&nbsp;●</h5>
+                >
+                  &nbsp;●
+                </h5>
               </template>
-              <span>{{socket && socket.connected ? `Ping: ${ping}ms` : 'No connection to server'}}</span>
+              <span>{{
+                socket && socket.connected
+                  ? `Ping: ${ping}ms`
+                  : "No connection to server"
+              }}</span>
             </v-tooltip>
 
             <v-tooltip bottom>
@@ -86,13 +120,13 @@
               </template>
               <span>
                 Sync own client
-                <br>Shift+Click to sync all clients
+                <br />Shift+Click to sync all clients
               </span>
             </v-tooltip>
 
             <v-spacer></v-spacer>
             <v-btn icon @click="toggleTheatre">
-              <v-icon>{{theatre ? "zoom_out" : "zoom_in"}}</v-icon>
+              <v-icon>{{ theatre ? "zoom_out" : "zoom_in" }}</v-icon>
             </v-btn>
             <v-btn
               icon
@@ -103,7 +137,7 @@
             </v-btn>
           </v-toolbar>
           <v-card-text ref="player">
-            <v-responsive :aspect-ratio="16/9" max-height="100vh">
+            <v-responsive :aspect-ratio="16 / 9" max-height="100vh">
               <v-container v-if="queue.length < 1" fluid fill-height>
                 <v-layout text-center align-center justify-center>
                   <v-flex xs12>
@@ -129,24 +163,34 @@
       </v-flex>
       <v-flex
         v-if="roomData"
-        :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl4'"
+        :class="
+          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl4'
+        "
       >
         <v-card>
           <v-toolbar dark color="primary">
             <v-toolbar-title>Users</v-toolbar-title>
           </v-toolbar>
           <v-card-text>
-            <v-progress-circular color="primary" indeterminate v-if="!socket.connected"></v-progress-circular>
-            <div v-else-if="users && users.length > 0" class="user-list" @wheel="scrollUserList">
+            <v-progress-circular
+              color="primary"
+              indeterminate
+              v-if="!socket.connected"
+            ></v-progress-circular>
+            <div
+              v-else-if="users && users.length > 0"
+              class="user-list"
+              @wheel="scrollUserList"
+            >
               <v-chip
                 v-for="user in users"
                 :key="user.displayName"
                 :class="user.isMe ? 'primary white--text' : ''"
               >
                 <v-avatar v-if="user.avatar">
-                  <img :src="user.avatar" alt="Avatar">
+                  <img :src="user.avatar" alt="Avatar" />
                 </v-avatar>
-                {{user.displayName}}
+                {{ user.displayName }}
               </v-chip>
             </div>
             <div v-else>
@@ -158,11 +202,17 @@
       </v-flex>
       <v-flex
         v-if="roomData"
-        :class="theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl10'"
+        :class="
+          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl10'
+        "
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>Playlist{{queue.length > 0 ? ` (${queue.length}): ${queue[0].title}` : ""}}</v-toolbar-title>
+            <v-toolbar-title
+              >Playlist{{
+                queue.length > 0 ? ` (${queue.length}): ${queue[0].title}` : ""
+              }}</v-toolbar-title
+            >
           </v-toolbar>
           <v-card-text>
             <v-form @submit="addVideo">
@@ -182,14 +232,17 @@
                         :class="showSearchResults ? '' : 'hide'"
                         @click="showSearchResults = false"
                         v-on="on"
-                      >list</v-icon>
+                        >list</v-icon
+                      >
                     </template>
                     Back to playlist view
                   </v-tooltip>
                 </template>
-                <v-icon color="success" slot="append" @click="addVideo">search</v-icon>
+                <v-icon color="success" slot="append" @click="addVideo"
+                  >search</v-icon
+                >
               </v-text-field>
-              <input type="submit" class="hide">
+              <input type="submit" class="hide" />
             </v-form>
             <div
               v-show="queue.length > 0 || showSearchResults"
@@ -202,23 +255,31 @@
                   v-for="video in searchResults"
                   two-line
                   :key="video.id"
-                  :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
+                  :class="
+                    userSettings.darkMode ? 'queue-item-dark' : 'queue-item'
+                  "
                 >
                   <img
                     :src="video.thumbnails.medium.url"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
-                  >
+                  />
                   <v-list-item-content>
                     <v-list-item-title>
                       <a
-                        :class="`no-link-deko ${userSettings.darkMode ? 'white--text' : 'black--text'}`"
+                        :class="
+                          `no-link-deko ${
+                            userSettings.darkMode
+                              ? 'white--text'
+                              : 'black--text'
+                          }`
+                        "
                         :href="video.url"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {{parseYoutubeTitle(video.title)}}
+                        {{ parseYoutubeTitle(video.title) }}
                         <v-icon small>open_in_new</v-icon>
                       </a>
                     </v-list-item-title>
@@ -228,17 +289,32 @@
                           :href="video.channel.url"
                           target="_blank"
                           rel="noopener noreferrer"
-                          :class="`no-link-deko ${userSettings.darkMode ? 'white--text' : 'black--text'}`"
-                        >{{parseYoutubeTitle(video.channel.title)}}</a>
+                          :class="
+                            `no-link-deko ${
+                              userSettings.darkMode
+                                ? 'white--text'
+                                : 'black--text'
+                            }`
+                          "
+                          >{{ parseYoutubeTitle(video.channel.title) }}</a
+                        >
                       </span>
-                      &mdash; {{video.description}}
+                      &mdash; {{ video.description }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                   <v-list-item-action>
                     <v-btn
                       icon
                       ripple
-                      @click="addVideo($event, video.id, parseYoutubeTitle(video.title), video.channel.title, video.description)"
+                      @click="
+                        addVideo(
+                          $event,
+                          video.id,
+                          parseYoutubeTitle(video.title),
+                          video.channel.title,
+                          video.description
+                        )
+                      "
                       class="playlist-add-button"
                     >
                       <v-icon class="playlist-add-icon">playlist_add</v-icon>
@@ -254,32 +330,42 @@
                       :key="video.uid"
                       :uid="video.uid"
                       class="move-cursor"
-                      :class="userSettings.darkMode ? 'queue-item-dark' : 'queue-item'"
+                      :class="
+                        userSettings.darkMode ? 'queue-item-dark' : 'queue-item'
+                      "
                     >
-                      <span class="queue-number">#{{index + 1}}</span>
+                      <span class="queue-number">#{{ index + 1 }}</span>
                       <img
-                        :src="`https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`"
+                        :src="
+                          `https://img.youtube.com/vi/${video.videoId}/mqdefault.jpg`
+                        "
                         height="50"
                         width="88.889"
                         class="playlist-thumbnail"
-                      >
+                      />
                       <v-list-item-content>
                         <v-list-item-title>
                           <a
-                            :class="userSettings.darkMode ? 'no-link-deko white--text' : 'no-link-deko black--text'"
-                            :href="`https://www.youtube.com/watch?v=${video.videoId}`"
+                            :class="
+                              userSettings.darkMode
+                                ? 'no-link-deko white--text'
+                                : 'no-link-deko black--text'
+                            "
+                            :href="
+                              `https://www.youtube.com/watch?v=${video.videoId}`
+                            "
                             target="_blank"
                             rel="noopener noreferrer"
                           >
-                            {{video.title}}
+                            {{ video.title }}
                             <v-icon small>open_in_new</v-icon>
                           </a>
                         </v-list-item-title>
                         <v-list-item-subtitle>
                           <span class="text--primary">
-                            {{parseYoutubeTitle(video.source)}}
+                            {{ parseYoutubeTitle(video.source) }}
                           </span>
-                          &mdash; {{video.description}}
+                          &mdash; {{ video.description }}
                         </v-list-item-subtitle>
                       </v-list-item-content>
                       <v-spacer></v-spacer>
@@ -288,8 +374,14 @@
                         @click="moveVideo(video.uid, 0)"
                         color="success"
                         class="no-select"
-                      >play_arrow</v-icon>
-                      <v-icon @click="removeVideo(video.uid)" color="error" class="no-select">close</v-icon>
+                        >play_arrow</v-icon
+                      >
+                      <v-icon
+                        @click="removeVideo(video.uid)"
+                        color="error"
+                        class="no-select"
+                        >close</v-icon
+                      >
                     </v-list-item>
                   </transition-group>
                 </draggable>
@@ -309,11 +401,15 @@
       </v-flex>
       <v-flex v-else xs8>
         <h1 class="display-4 font-weight-bold">404</h1>
-        <h5 class="headline font-weight-light">Room not found. Create one here:</h5>
+        <h5 class="headline font-weight-light">
+          Room not found. Create one here:
+        </h5>
         <v-btn to="/rooms">My rooms</v-btn>
       </v-flex>
     </v-layout>
-    <v-alert type="info" dismissible v-model="showAlert">Video {{ videoTitle }} added</v-alert>
+    <v-alert type="info" dismissible v-model="showAlert"
+      >Video {{ videoTitle }} added</v-alert
+    >
   </v-container>
 </template>
 
@@ -774,14 +870,8 @@ export default {
     playlistSortEnd(event) {
       console.log("playlistSortEnd", event);
       if (event && event.type === "end") {
-        if (
-          event.item &&
-          event.item.getAttribute("uid")
-        ) {
-          this.moveVideo(
-            event.item.getAttribute("uid"),
-            event.newIndex
-          );
+        if (event.item && event.item.getAttribute("uid")) {
+          this.moveVideo(event.item.getAttribute("uid"), event.newIndex);
         }
       }
     },

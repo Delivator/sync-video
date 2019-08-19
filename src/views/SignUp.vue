@@ -42,9 +42,13 @@
               </div>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="primary" to="/login">Login <v-icon>keyboard_arrow_right</v-icon></v-btn>
+              <v-btn color="primary" to="/login"
+                >Login <v-icon>keyboard_arrow_right</v-icon></v-btn
+              >
               <v-spacer></v-spacer>
-              <v-btn @click="signUp" color="success" type="submit">Sign Up</v-btn>
+              <v-btn @click="signUp" color="success" type="submit"
+                >Sign Up</v-btn
+              >
             </v-card-actions>
           </v-card>
         </v-form>
@@ -98,14 +102,17 @@ export default {
               .updateProfile({ displayName: this.displayName })
               .catch(e => this.alertBox.send("error", e, 10000));
           this.$router.replace("/");
-          this.alertBox.send("success", `Account for ${user.user.email} created`);
+          this.alertBox.send(
+            "success",
+            `Account for ${user.user.email} created`
+          );
         })
         .catch(e => {
           this.alertBox.send("error", e, 10000);
         });
     },
     generateUsername() {
-      let number = Math.floor((Math.random() * 9999) + 1).toString();
+      let number = Math.floor(Math.random() * 9999 + 1).toString();
       while (number.length < 4) {
         number = "0" + number;
       }
