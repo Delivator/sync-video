@@ -1,21 +1,23 @@
 <template>
   <v-container>
-    <v-layout text-center wrap>
-      <v-flex xs12>
+    <v-row>
+      <v-col cols="12">
         <v-img
           :src="require('../assets/logo.svg')"
           class="my-3"
           contain
           height="150"
         ></v-img>
-      </v-flex>
+      </v-col>
 
-      <v-flex xs12 offset-xs0 md8 offset-md2>
-        <h1 class="display-2 font-weight-bold mb-3" v-if="currentUser">
+      <v-col cols="12" offset="0" md="8" offset-md="2">
+        <h1
+          class="display-2 font-weight-bold mb-3 text-center"
+          v-if="currentUser"
+        >
           Welcome back,
-          <span class="font-weight-light">{{
-            currentUser.displayName || currentUser.email || "Guest"
-          }}</span
+          <span class="font-weight-light">
+            {{ currentUser.displayName || currentUser.email || "Guest" }} </span
           >.
         </h1>
         <h1 class="display-2 font-weight-bold mb-3" v-else>
@@ -25,13 +27,59 @@
           class="divider-margin"
           v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0"
         ></v-divider>
+      </v-col>
+      <v-col cols="12" offset="0" md="8" offset-md="2">
         <div
           v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0"
         >
-          <h4 class="display-1">Recent rooms:</h4>
-          <template v-for="room in userSettings.roomHistory">
-            <v-btn :key="room.id" :to="`/r/${room.id}`">{{ room.title }}</v-btn>
-          </template>
+          <h4 class="headline"><v-icon>history</v-icon> Recent rooms:</h4>
+          <v-row justify="center">
+            <template v-for="room in userSettings.roomHistory">
+              <v-col :key="room.id" cols="12" xl="3" lg="4" sm="6">
+                <v-card :to="`/r/${room.id}`" class="text-center room-card">
+                  <v-toolbar color="primary">
+                    <v-toolbar-title>{{ room.title }}</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      color="error"
+                      fab
+                      small
+                      class="room-card-close-btn"
+                      @click="removeFromHistory(room.id, $event)"
+                      ><v-icon>close</v-icon></v-btn
+                    >
+                  </v-toolbar>
+                  <v-card-text>
+                    <p class="center-text">
+                      {{
+                        roomsWithStatus[room.id]
+                          ? roomsWithStatus[room.id].usersOnline
+                          : 0
+                      }}
+                      <v-icon>person</v-icon>
+                      {{
+                        roomsWithStatus[room.id]
+                          ? roomsWithStatus[room.id].queueLengh
+                          : 0
+                      }}
+                      <v-icon>list</v-icon>
+                    </p>
+                    <p>
+                      Now Playing:
+                      <strong>
+                        {{
+                          roomsWithStatus[room.id] &&
+                          roomsWithStatus[room.id].nowPlaying
+                            ? roomsWithStatus[room.id].nowPlaying
+                            : "-/-"
+                        }}</strong
+                      >
+                    </p>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </template>
+          </v-row>
         </div>
         <p
           class="subheading font-weight-regular"
@@ -45,16 +93,16 @@
           Your email address has not yet been confirmed. Click here to send a
           verification email.
           <br />
-          <v-btn outline @click="verifyEmail">Verify email</v-btn>
+          <v-btn outlined @click="verifyEmail">Verify email</v-btn>
         </p>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script>
 export default {
-  props: ["alertBox", "currentUser", "userSettings"],
+  props: ["alertBox", "currentUser", "userSettings", "roomsWithStatus"],
   data() {
     return {
       showVerify: true
@@ -75,6 +123,14 @@ export default {
           })
           .catch(e => this.alertBox.send("error", e, 10000));
       }
+    },
+    removeFromHistory: function(roomID, event) {
+      if (event) event.preventDefault();
+      let roomHistory = [];
+      // remove current room from history
+      roomHistory = this.userSettings.roomHistory;
+      roomHistory = roomHistory.filter(room => room.id !== roomID);
+      this.userSettings.roomHistory = roomHistory;
     }
   }
 };

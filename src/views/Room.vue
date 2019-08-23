@@ -1,5 +1,5 @@
 <template>
-  <v-container grid-list-md>
+  <v-container>
     <template v-if="roomData">
       <v-dialog v-model="dialog" max-width="600px">
         <v-form @submit="updateRoom">
@@ -19,7 +19,7 @@
               <v-checkbox v-model="isPublic" label="Public"></v-checkbox>
             </v-card-text>
             <v-card-actions>
-              <v-btn color="error" outline @click="dialog = false"
+              <v-btn color="error" outlined @click="dialog = false"
                 >Cancel</v-btn
               >
               <v-spacer></v-spacer>
@@ -54,7 +54,7 @@
             <v-card-actions>
               <v-btn
                 color="error"
-                outline
+                outlined
                 @click="
                   dialog2 = false;
                   dialog = true;
@@ -70,21 +70,23 @@
         </v-form>
       </v-dialog>
     </template>
-    <v-layout v-if="loading" align-center justify-center row text-center>
-      <v-flex xs12>
+    <v-row class="text-center" v-if="loading" align="center" justify="center">
+      <v-col cols="12">
         <v-progress-circular
           :size="50"
           indeterminate
           color="primary"
         ></v-progress-circular>
-      </v-flex>
-    </v-layout>
-    <v-layout v-else justify-center align-center wrap row>
-      <v-flex
+      </v-col>
+    </v-row>
+    <v-row v-else justify="center" align="center">
+      <v-col
         v-if="roomData"
-        :class="
-          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl8'
-        "
+        cols="12"
+        :sm="theatre ? '12' : '10'"
+        :md="theatre ? '12' : '10'"
+        :lg="theatre ? '12' : '11'"
+        :xl="theatre ? '10' : '8'"
         id="playerFlex"
       >
         <v-card>
@@ -138,12 +140,12 @@
           </v-toolbar>
           <v-card-text ref="player">
             <v-responsive :aspect-ratio="16 / 9" max-height="100vh">
-              <v-container v-if="queue.length < 1" fluid fill-height>
-                <v-layout text-center align-center justify-center>
-                  <v-flex xs12>
+              <v-container class="fill-height" v-if="queue.length < 1" fluid>
+                <v-row class="text-center" align="center" justify="center">
+                  <v-col cols="12">
                     <h1>No videos in queue</h1>
-                  </v-flex>
-                </v-layout>
+                  </v-col>
+                </v-row>
               </v-container>
               <youtube
                 :video-id="playerData.videoId"
@@ -160,18 +162,20 @@
             </v-responsive>
           </v-card-text>
         </v-card>
-      </v-flex>
-      <v-flex
+      </v-col>
+      <v-col
         v-if="roomData"
-        :class="
-          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl4'
-        "
+        cols="12"
+        :sm="theatre ? '12' : '10'"
+        :md="theatre ? '12' : '10'"
+        :lg="theatre ? '12' : '11'"
+        :xl="theatre ? '10' : '4'"
       >
         <v-card>
           <v-toolbar dark color="primary">
             <v-toolbar-title>Users</v-toolbar-title>
           </v-toolbar>
-          <v-card-text>
+          <v-card-text class="text-center">
             <v-progress-circular
               color="primary"
               indeterminate
@@ -199,12 +203,14 @@
             <p></p>
           </v-card-text>
         </v-card>
-      </v-flex>
-      <v-flex
+      </v-col>
+      <v-col
         v-if="roomData"
-        :class="
-          theatre ? 'xs12 sm12 md12 lg12 xl10' : 'xs12 sm10 md10 lg11 xl10'
-        "
+        cols="12"
+        :sm="theatre ? '12' : '10'"
+        :md="theatre ? '12' : '10'"
+        :lg="theatre ? '12' : '11'"
+        :xl="theatre ? '10' : '10'"
       >
         <v-card>
           <v-toolbar dark color="primary">
@@ -249,7 +255,9 @@
               @mouseenter="searchHover = true"
               @mouseleave="searchHover = false"
             >
-              <h6 class="title" v-if="showSearchResults">Search results:</h6>
+              <h6 class="title text-center" v-if="showSearchResults">
+                YouTube search results:
+              </h6>
               <v-list two-line v-show="showSearchResults">
                 <v-list-item
                   v-for="video in searchResults"
@@ -389,24 +397,24 @@
             </div>
             <div v-show="queue.length < 1 && !showSearchResults">
               <v-container>
-                <v-layout row wrap>
-                  <v-flex xs12>
-                    <h6 class="title">No videos in queue</h6>
-                  </v-flex>
-                </v-layout>
+                <v-row>
+                  <v-col cols="12">
+                    <h6 class="title text-center">No videos in queue</h6>
+                  </v-col>
+                </v-row>
               </v-container>
             </div>
           </v-card-text>
         </v-card>
-      </v-flex>
-      <v-flex v-else xs8>
+      </v-col>
+      <v-col v-else cols="8" class="text-center">
         <h1 class="display-4 font-weight-bold">404</h1>
         <h5 class="headline font-weight-light">
           Room not found. Create one here:
         </h5>
         <v-btn to="/rooms">My rooms</v-btn>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
     <v-alert type="info" dismissible v-model="showAlert"
       >Video {{ videoTitle }} added</v-alert
     >
@@ -502,7 +510,12 @@ export default {
           .doc(this.roomID)
           .delete()
           .then(() => {
+            let roomHistory = [];
             this.alertBox.send("success", "Room deleted");
+            // remove current room from history
+            roomHistory = this.userSettings.roomHistory;
+            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+            this.userSettings.roomHistory = roomHistory;
             this.$router.replace("/");
           })
           .catch(e => this.alertBox.send("error", e, 10000));
@@ -565,7 +578,7 @@ export default {
             this.socket.on("reconnect", () => {
               setTimeout(() => {
                 this.socket.emit("joinRoom", this.roomID);
-                if (this.currentUser && this.socket.connected) {
+                if (this.currentUser) {
                   this.currentUser
                     .getIdToken()
                     .then(token => {
@@ -576,18 +589,26 @@ export default {
               }, 0);
             });
             this.socket.on("roomUsersUpdate", users => {
-              if (users) {
-                users.forEach((user, index) => {
-                  if (user.id === this.socket.id) {
-                    const me = user;
-                    user.isMe = true;
-                    users.splice(index, 1);
-                    users.unshift(me);
-                  }
-                });
-                users = [...new Set(users)];
-                this.users = users;
-              }
+              if (!users) return;
+              let addedUsers = [];
+              let newUsers = [];
+              users.forEach((user, index) => {
+                if (user.id === this.socket.id) {
+                  const me = user;
+                  user.isMe = true;
+                  users.splice(index, 1);
+                  users.unshift(me);
+                }
+              });
+              users = [...new Set(users)];
+              users.forEach(user => {
+                if (addedUsers.includes(user.uid)) return;
+                newUsers.push(user);
+                addedUsers.push(user.uid);
+                addedUsers = [...new Set(addedUsers)];
+              });
+              newUsers = [...new Set(newUsers)];
+              this.users = newUsers;
             });
             this.socket.on("playerStatusUpdate", playerStatus => {
               if (playerStatus && playerStatus.status)
@@ -731,7 +752,7 @@ export default {
           this.socket.emit("skipVideo", this.roomID);
       }
       if (this.queue.length <= 1) {
-        document.exitFullscreen();
+        this.closeFullscreen();
       }
     },
     animatePlaylistAddButton(iconElement) {
@@ -879,6 +900,17 @@ export default {
       if (this.socket && this.socket.connected) {
         this.socket.emit("getPlayerStatus", this.roomID, true, forceSend);
       }
+    },
+    closeFullscreen() {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+      } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+      } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+      }
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -911,9 +943,14 @@ export default {
               id: this.roomID,
               title: this.roomData.title
             });
-            // keep room history < 6
-            if (roomHistory.length > 5) roomHistory.pop();
+            // keep room history <= 4
+            if (roomHistory.length > 4) roomHistory.pop();
             // save room history in user settings
+            this.userSettings.roomHistory = roomHistory;
+          } else {
+            // remove current room from history
+            roomHistory = this.userSettings.roomHistory;
+            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
             this.userSettings.roomHistory = roomHistory;
           }
         })

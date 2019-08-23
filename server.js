@@ -32,6 +32,26 @@ const firebaseConfig = require("./src/firebase.json");
 const settings = require("./src/settings.json");
 let rooms = {};
 
+class PlayerStatus {
+  constructor(
+    status = "pause",
+    currentTime = 0.0,
+    eventTime = new Date().getTime()
+  ) {
+    this.status = status;
+    this.currentTime = currentTime;
+    this.eventTime = eventTime;
+  }
+}
+
+class Room {
+  constructor(queue = [], playerStatus = new PlayerStatus(), lastRemove = 0) {
+    this.queue = queue;
+    this.playerStatus = playerStatus;
+    this.lastRemove = lastRemove;
+  }
+}
+
 // Initialize firebase admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
@@ -55,16 +75,17 @@ function getGravatarUrl(email) {
 }
 
 function getRoomUsers(room) {
-  const rooms2 = io.sockets.adapter.rooms;
+  const roomsList = io.sockets.adapter.rooms;
   let users = [];
-  if (room in rooms2) {
-    for (const socket in rooms2[room].sockets) {
-      const socket2 = io.sockets.connected[socket];
-      if (socket in io.sockets.connected)
+  if (room in roomsList) {
+    for (const socketInList in roomsList[room].sockets) {
+      const socket = io.sockets.connected[socketInList];
+      if (socketInList in io.sockets.connected)
         users.push({
-          displayName: socket2.displayName,
-          avatar: socket2.avatar || null,
-          id: socket2.id
+          displayName: socket.displayName,
+          avatar: socket.avatar || null,
+          id: socket.id,
+          uid: socket.uid || socket.id
         });
     }
   }
@@ -144,7 +165,8 @@ io.on("connection", socket => {
 
   // when a user joins a room
   socket.on("joinRoom", room => {
-    if (!room || room === "") return;
+    if (!room) return;
+    if (!rooms[room]) rooms[room] = new Room();
     socket.join(room);
     setTimeout(() => {
       io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
@@ -154,7 +176,7 @@ io.on("connection", socket => {
   });
 
   socket.on("leaveRoom", room => {
-    if (!room || room === "") return;
+    if (!room || !rooms[room]) return;
     socket.leave(room);
     io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
   });
@@ -164,14 +186,15 @@ io.on("connection", socket => {
       if (socket.rooms.hasOwnProperty(room)) {
         const room2 = socket.rooms[room];
         setTimeout(() => {
-          io.to(room2).emit("roomUsersUpdate", getRoomUsers(room2));
+          if (rooms[room2])
+            io.to(room2).emit("roomUsersUpdate", getRoomUsers(room2));
         }, 0);
       }
     }
   });
 
   socket.on("authenticate", token => {
-    if (!token || token === "") return;
+    if (!token) return;
     admin
       .auth()
       .verifyIdToken(token)
@@ -182,7 +205,8 @@ io.on("connection", socket => {
         for (const r in socket.rooms) {
           if (socket.rooms.hasOwnProperty(r)) {
             const room = socket.rooms[r];
-            io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
+            if (rooms[room])
+              io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
           }
         }
       })
@@ -191,8 +215,7 @@ io.on("connection", socket => {
 
   socket.on("sendPlayerStatusUpdate", (room, playerStatus) => {
     if (!room || room === "") return;
-    if (!rooms[room]) rooms[room] = {};
-    if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
+    if (!rooms[room]) rooms[room] = new Room();
     playerStatus.eventTime = new Date().getTime();
     rooms[room].playerStatus = playerStatus;
     socket.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
@@ -200,9 +223,7 @@ io.on("connection", socket => {
 
   socket.on("addVideo", (room, videoObj, callback) => {
     if (!room || !videoObj || !videoObj.videoId) return;
-    if (!rooms[room]) rooms[room] = {};
-    if (!rooms[room].queue) rooms[room].queue = [];
-    if (!rooms[room].playerStatus) rooms[room].playerStatus = {};
+    if (!rooms[room]) rooms[room] = new Room();
     // max queue size 50 entries
     if (rooms[room].queue.length > 49)
       return callback("Max queue length is 50");
@@ -223,9 +244,7 @@ io.on("connection", socket => {
     callback();
 
     if (rooms[room].queue.length === 1) {
-      rooms[room].playerStatus.status = "play";
-      rooms[room].playerStatus.currentTime = 0.0;
-      rooms[room].playerStatus.eventTime = new Date().getTime();
+      rooms[room].playerStatus = new PlayerStatus("play");
       io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
     }
 
@@ -233,7 +252,7 @@ io.on("connection", socket => {
   });
 
   socket.on("removeVideo", (room, uid) => {
-    if (!room || !uid || !rooms || !rooms[room] || !rooms[room].queue) return;
+    if (!room || !uid || !rooms[room]) return;
     rooms[room].queue.forEach((video, index) => {
       if (video.uid === uid) {
         rooms[room].queue.splice(index, 1);
@@ -243,7 +262,7 @@ io.on("connection", socket => {
   });
 
   socket.on("moveVideo", (room, uid, position) => {
-    if (!room || !uid || !rooms || !rooms[room] || !rooms[room].queue) return;
+    if (!room || !uid || !rooms[room]) return;
     rooms[room].queue.forEach((video, index) => {
       if (video.uid === uid) {
         if (position > rooms[room].queue.length - 1) {
@@ -259,12 +278,12 @@ io.on("connection", socket => {
   });
 
   socket.on("getQueue", room => {
-    if (!room || !rooms || !rooms[room]) return;
+    if (!room || !rooms[room]) return;
     io.to(socket).emit("updateQueue", rooms[room].queue);
   });
 
   socket.on("getPlayerStatus", (room, force = false, forceAll = false) => {
-    if (!room || !rooms || !rooms[room] || !rooms[room].playerStatus) return;
+    if (!room || !rooms[room]) return;
     let newPlayerStatus = { ...{}, ...rooms[room].playerStatus };
     if (newPlayerStatus.status === "play") {
       const timeElapsed =
@@ -280,36 +299,41 @@ io.on("connection", socket => {
   });
 
   socket.on("skipVideo", room => {
-    if (
-      !room ||
-      !rooms ||
-      !rooms[room] ||
-      !rooms[room].queue ||
-      !rooms[room].playerStatus
-    )
-      return;
+    if (!room || !rooms[room]) return;
     // only skip videos every 500ms to prevent double skipping
-    if (
-      rooms[room].lastRemove &&
-      rooms[room].lastRemove + 500 > new Date().getTime()
-    )
-      return;
+    if (rooms[room].lastRemove + 500 > new Date().getTime()) return;
 
     if (rooms[room].queue.length > 0) {
       rooms[room].lastRemove = new Date().getTime();
       rooms[room].queue.shift();
       io.to(room).emit("updateQueue", rooms[room].queue);
-      rooms[room].playerStatus.status = "pause";
-      rooms[room].playerStatus.currentTime = 0.0;
-      rooms[room].playerStatus.eventTime = new Date().getTime();
+      rooms[room].playerStatus = new PlayerStatus();
       io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
       setTimeout(() => {
-        rooms[room].playerStatus.status = "play";
-        rooms[room].playerStatus.currentTime = 0.0;
-        rooms[room].playerStatus.eventTime = new Date().getTime();
+        rooms[room].playerStatus = new PlayerStatus("play");
         io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
-      }, 500);
+      }, 1000);
     }
+  });
+
+  socket.on("getRoomStatus", (roomHistory, callback) => {
+    if (!roomHistory || !callback) return false;
+    let roomsWithStatus = {};
+    if (roomHistory.length < 1) return false;
+    roomHistory.forEach(room => {
+      roomsWithStatus[room] = {
+        usersOnline: 0,
+        queueLengh: 0,
+        nowPlaying: ""
+      };
+      if (rooms[room]) {
+        roomsWithStatus[room].usersOnline = getRoomUsers(room).length;
+        roomsWithStatus[room].queueLengh = rooms[room].queue.length;
+        if (rooms[room].queue.length > 0)
+          roomsWithStatus[room].nowPlaying = rooms[room].queue[0].title;
+      }
+    });
+    return callback(roomsWithStatus);
   });
 });
 

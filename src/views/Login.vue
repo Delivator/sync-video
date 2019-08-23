@@ -1,7 +1,7 @@
 <template>
-  <v-container fluid fill-height>
-    <v-layout align-center justify-center>
-      <v-flex xs12 sm8 md6 lg4>
+  <v-container class="fill-height" fluid>
+    <v-row align="center" justify="center">
+      <v-col cols="12" sm="8" md="6" lg="4">
         <v-form @submit="login">
           <v-card class="elevation-12">
             <v-toolbar dark color="primary">
@@ -44,8 +44,8 @@
             </v-card-actions>
           </v-card>
         </v-form>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 

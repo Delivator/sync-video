@@ -82,11 +82,13 @@
         :socket="socket"
         :userSettings="userSettings"
         :db="db"
+        :roomsWithStatus="roomsWithStatus"
+        :getRoomsStatus="getRoomsStatus"
       />
     </v-content>
     <v-footer height="auto">
-      <v-layout row wrap justify-center>
-        <v-flex xs12 py-3 text-center>
+      <v-row justify="center">
+        <v-col class="py-3 text-center" cols="12">
           Made with 💚 by
           <a
             :class="userSettings.darkMode ? 'white--text' : 'black--text'"
@@ -103,8 +105,17 @@
             rel="noopener noreferrer"
             >Source code</a
           >
-        </v-flex>
-      </v-layout>
+          &ndash;
+          <a
+            class="version-tag"
+            :class="userSettings.darkMode ? 'white--text' : 'black--text'"
+            href="https://github.com/Delivator/sync-video/commits/master"
+            target="_blank"
+            rel="noopener noreferrer"
+            >v{{ version }}</a
+          >
+        </v-col>
+      </v-row>
     </v-footer>
   </v-app>
 </template>
@@ -120,6 +131,7 @@ import "firebase/firestore";
 import io from "socket.io-client";
 import { MD5 } from "crypto-js";
 import settings from "./settings.json";
+import version from "../package.json";
 
 export default {
   name: "App",
@@ -162,12 +174,22 @@ export default {
         roomHistory: []
       },
       db: null,
-      skipSettingsEvent: false
+      skipSettingsEvent: false,
+      version: version.version,
+      roomsWithStatus: {}
     };
   },
   watch: {
     userSettings: {
       handler(newUserSettings) {
+        if (
+          newUserSettings &&
+          newUserSettings.roomHistory &&
+          newUserSettings.roomHistory.length > 0
+        ) {
+          let rooms = newUserSettings.roomHistory.map(r => r.id);
+          this.getRoomsStatus(rooms);
+        }
         this.$vuetify.theme.dark = newUserSettings.darkMode;
         if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
         localStorage.userSettings = JSON.stringify(newUserSettings);
@@ -198,6 +220,17 @@ export default {
       return `https://www.gravatar.com/avatar/${MD5(
         email.trim()
       ).toString()}?s=${size}`;
+    },
+    getRoomsStatus: function(rooms) {
+      if (!rooms || rooms.length < 1 || !this.socket || !this.socket.connected)
+        return;
+      this.socket.emit("getRoomStatus", rooms, roomsWithStatus => {
+        if (roomsWithStatus)
+          this.roomsWithStatus = {
+            ...this.roomsWithStatus,
+            ...roomsWithStatus
+          };
+      });
     }
   },
   mounted() {
@@ -276,7 +309,7 @@ export default {
           });
         })
         .catch(e => this.alertBox.send("error", e, 10000));
-    } else {
+    } else if (!this.socket) {
       this.socket = io(settings.socketUrl);
     }
 

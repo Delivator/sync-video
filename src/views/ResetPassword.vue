@@ -1,5 +1,5 @@
 <template>
-  <v-container fluid fill-height>
+  <v-container class="fill-height" fluid>
     <v-dialog v-model="dialog" persistent max-width="600px">
       <v-form @submit="reauthenticateAndChangePassword">
         <v-card>
@@ -34,8 +34,8 @@
         </v-card>
       </v-form>
     </v-dialog>
-    <v-layout align-center justify-center>
-      <v-flex xs12 sm8 md4>
+    <v-row align="center" justify="center">
+      <v-col cols="12" sm="8" md="4">
         <v-form>
           <v-card class="elevation-12">
             <v-toolbar dark color="primary">
@@ -73,7 +73,7 @@
             <v-card-actions>
               <v-btn
                 to="/"
-                outline
+                outlined
                 v-if="!((email && actionCode) || currentUser)"
                 >Go Back</v-btn
               >
@@ -95,8 +95,8 @@
             </v-card-actions>
           </v-card>
         </v-form>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -137,15 +137,13 @@ export default {
         this.$refs.loginPassword.validate(true);
         return;
       }
-      firebase
-        .auth()
-        .EmailAuthProvider(this.loginEmail, this.loginPassword)
-        .then(cred => {
-          this.currentUser
-            .reauthenticateAndRetrieveDataWithCredential(cred)
-            .then(() => this.changePassword())
-            .catch(e => this.alertBox.send("error", e, 10000));
-        })
+      const cred = firebase.auth.EmailAuthProvider.credential(
+        this.loginEmail,
+        this.loginPassword
+      );
+      this.currentUser
+        .reauthenticateWithCredential(cred)
+        .then(() => this.changePassword())
         .catch(e => this.alertBox.send("error", e, 10000));
     },
     confirm(event) {
@@ -174,7 +172,12 @@ export default {
       }
       this.currentUser
         .updatePassword(this.password)
-        .then(() => this.alertBox.send("success", "Password changed"))
+        .then(() => {
+          this.alertBox.send("success", "Password changed");
+          if (this.dialog) this.dialog = false;
+          this.loginPassword = "";
+          this.password = "";
+        })
         .catch(e => {
           if (e.code === "auth/requires-recent-login") this.dialog = true;
           this.alertBox.send("error", e, 10000);

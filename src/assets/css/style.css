@@ -160,3 +160,16 @@ html {
 .clickable {
   cursor: pointer;
 }
+
+.version-tag {
+  font-family: monospace;
+}
+
+.room-card-close-btn {
+  opacity: 0;
+  transition: opacity .2s;
+}
+
+.room-card:hover .room-card-close-btn {
+  opacity: 100;
+}

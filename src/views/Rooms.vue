@@ -1,5 +1,5 @@
 <template>
-  <v-container fill-height>
+  <v-container class="fill-height">
     <v-dialog v-model="dialog" max-width="600px">
       <v-form @submit="addRoom">
         <v-card>
@@ -35,25 +35,58 @@
         </v-card>
       </v-form>
     </v-dialog>
-    <v-layout v-if="loading" align-center justify-center row text-center>
-      <v-flex xs12>
+    <v-row class="text-center" v-if="loading" align="center" justify="center">
+      <v-col cols="12">
         <v-progress-circular
           :size="50"
           indeterminate
           color="primary"
         ></v-progress-circular>
-      </v-flex>
-    </v-layout>
-    <v-layout v-else justify-center text-center>
-      <v-flex xs12 md8>
+      </v-col>
+    </v-row>
+    <v-row class="text-center" v-else justify="center">
+      <v-col cols="12" md="8">
         <div v-if="currentUser">
           <div v-if="rooms">
             <h2 class="display-3">Your rooms:</h2>
-            <template v-for="room in rooms">
-              <v-btn :key="room.id" :to="`/r/${room.id}`">{{
-                room.data().title
-              }}</v-btn>
-            </template>
+            <v-row justify="center">
+              <template v-for="room in rooms">
+                <v-col :key="room.id" cols="12" xl="3" lg="4" sm="6">
+                  <v-card :to="`/r/${room.id}`">
+                    <v-toolbar color="primary">
+                      <v-toolbar-title>{{ room.data().title }}</v-toolbar-title>
+                    </v-toolbar>
+                    <v-card-text>
+                      <p class="center-text">
+                        {{
+                          roomsWithStatus[room.id]
+                            ? roomsWithStatus[room.id].usersOnline
+                            : 0
+                        }}
+                        <v-icon>person</v-icon>
+                        {{
+                          roomsWithStatus[room.id]
+                            ? roomsWithStatus[room.id].queueLengh
+                            : 0
+                        }}
+                        <v-icon>list</v-icon>
+                      </p>
+                      <p>
+                        Now Playing:
+                        <strong>
+                          {{
+                            roomsWithStatus[room.id] &&
+                            roomsWithStatus[room.id].nowPlaying
+                              ? roomsWithStatus[room.id].nowPlaying
+                              : "-/-"
+                          }}</strong
+                        >
+                      </p>
+                    </v-card-text>
+                  </v-card>
+                </v-col>
+              </template>
+            </v-row>
             <v-divider class="divider-margin"></v-divider>
           </div>
           <div v-else>
@@ -65,10 +98,10 @@
         </div>
         <div v-else>
           <h4 class="display-1">You have to be logged in to create rooms.</h4>
-          <v-btn to="/login" outline>Login</v-btn>
+          <v-btn to="/login" outlined>Login</v-btn>
         </div>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
@@ -80,7 +113,7 @@
 import { setTimeout } from "timers";
 
 export default {
-  props: ["alertBox", "currentUser", "db"],
+  props: ["alertBox", "currentUser", "db", "roomsWithStatus"],
   data() {
     return {
       rooms: null,
@@ -108,7 +141,9 @@ export default {
           .where("owner", "==", this.currentUser.uid)
           .get()
           .then(querySnapshot => {
-            if (!querySnapshot.empty) this.rooms = querySnapshot.docs;
+            if (!querySnapshot.empty) {
+              this.rooms = querySnapshot.docs;
+            }
             this.loading = false;
             return querySnapshot.docs;
           })

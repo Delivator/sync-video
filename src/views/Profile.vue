@@ -1,5 +1,5 @@
 <template>
-  <v-container fill-height>
+  <v-container class="fill-height">
     <v-dialog v-model="dialog" persistent max-width="600px">
       <v-form @submit="reauthenticateAndChangeEmail">
         <v-card>
@@ -32,8 +32,8 @@
         </v-card>
       </v-form>
     </v-dialog>
-    <v-layout row justify-center align-center>
-      <v-flex xs12 sm9 md9 lg7 xl4>
+    <v-row justify="center" align="center">
+      <v-col cols="12" sm="9" md="9" lg="7" xl="4">
         <v-card>
           <v-toolbar dark color="primary">
             <v-toolbar-title class="headline"
@@ -110,15 +110,15 @@
             </div>
           </v-card-text>
           <v-card-actions>
-            <v-btn v-if="!currentUser" to="/login" outline>Login</v-btn>
+            <v-btn v-if="!currentUser" to="/login" d>Login</v-btn>
             <v-spacer></v-spacer>
             <v-btn v-if="currentUser" to="/reset-password"
               >Change Password</v-btn
             >
           </v-card-actions>
         </v-card>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
