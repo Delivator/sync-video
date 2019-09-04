@@ -175,12 +175,13 @@
           <v-toolbar dark color="primary">
             <v-toolbar-title>Users</v-toolbar-title>
           </v-toolbar>
-          <v-card-text class="text-center">
-            <v-progress-circular
-              color="primary"
-              indeterminate
-              v-if="!socket.connected"
-            ></v-progress-circular>
+          <v-card-text>
+            <div class="text-center" v-if="!socket.connected">
+              <v-progress-circular
+                color="primary"
+                indeterminate
+              ></v-progress-circular>
+            </div>
             <div
               v-else-if="users && users.length > 0"
               class="user-list"
@@ -191,16 +192,15 @@
                 :key="user.displayName"
                 :class="user.isMe ? 'primary white--text' : ''"
               >
-                <v-avatar v-if="user.avatar">
+                <v-avatar v-if="user.avatar" left>
                   <img :src="user.avatar" alt="Avatar" />
                 </v-avatar>
                 {{ user.displayName }}
               </v-chip>
             </div>
-            <div v-else>
+            <div v-else class="text-center">
               <p class="subheading">No users connected</p>
             </div>
-            <p></p>
           </v-card-text>
         </v-card>
       </v-col>
@@ -437,7 +437,15 @@ export default {
   components: {
     draggable
   },
-  props: ["alertBox", "currentUser", "socket", "userSettings", "db"],
+  props: [
+    "alertBox",
+    "currentUser",
+    "socket",
+    "userSettings",
+    "db",
+    "ping",
+    "pingColor"
+  ],
   data() {
     return {
       roomID: this.$route.params.id || null,
@@ -465,8 +473,6 @@ export default {
       showSearchResults: false,
       searchHover: false,
       playerStatus: { status: "play" },
-      ping: 0,
-      pingColor: "grey--text",
       rules: {
         required: value => !!value || "Required.",
         title: value => 1 < value.length < 65 || "1-64 Characters"
@@ -681,19 +687,6 @@ export default {
                 // when the queue is empty
                 this.playerData.videoSource = "";
                 this.playerData.videoId = "null";
-              }
-            });
-            this.socket.on("pong", ping => {
-              this.ping = ping;
-
-              if (ping < 50) {
-                this.pingColor = "green--text";
-              } else if (ping < 100) {
-                this.pingColor = "lime--text";
-              } else if (ping < 150) {
-                this.pingColor = "yellow--text text--darken-3";
-              } else if (ping > 200) {
-                this.pingColor = "orange--text text--darken-3";
               }
             });
           }

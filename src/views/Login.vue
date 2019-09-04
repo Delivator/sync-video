@@ -5,7 +5,7 @@
         <v-form @submit="login">
           <v-card class="elevation-12">
             <v-toolbar dark color="primary">
-              <v-toolbar-title>Login</v-toolbar-title>
+              <v-toolbar-title><v-icon>person</v-icon> Login</v-toolbar-title>
             </v-toolbar>
             <v-card-text>
               <div v-if="loading">

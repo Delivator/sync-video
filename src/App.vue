@@ -1,5 +1,21 @@
 <template>
   <v-app>
+    <template>
+      <v-row justify="center">
+        <v-dialog v-model="showChangelog" width="600px">
+          <v-card>
+            <v-card-title>
+              <span class="headline">Changelog</span>
+            </v-card-title>
+            <v-card-text v-html="changelog"></v-card-text>
+            <v-card-actions>
+              <div class="flex-grow-1"></div>
+              <v-btn @click="showChangelog = false">Close</v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
+      </v-row>
+    </template>
     <v-app-bar app>
       <v-toolbar-title class="headline text-uppercase">
         <router-link
@@ -84,6 +100,8 @@
         :db="db"
         :roomsWithStatus="roomsWithStatus"
         :getRoomsStatus="getRoomsStatus"
+        :ping="ping"
+        :pingColor="pingColor"
       />
     </v-content>
     <v-footer height="auto">
@@ -109,10 +127,19 @@
           <a
             class="version-tag"
             :class="userSettings.darkMode ? 'white--text' : 'black--text'"
-            href="https://github.com/Delivator/sync-video/commits/master"
-            target="_blank"
-            rel="noopener noreferrer"
+            href=""
+            @click="
+              $event.preventDefault();
+              showChangelog = true;
+            "
             >v{{ version }}</a
+          >
+          &ndash;
+          <span
+            >{{ onlineClients }} user{{
+              onlineClients > 1 ? "s" : ""
+            }}
+            connected</span
           >
         </v-col>
       </v-row>
@@ -132,6 +159,10 @@ import io from "socket.io-client";
 import { MD5 } from "crypto-js";
 import settings from "./settings.json";
 import version from "../package.json";
+import showdown from "showdown";
+import changelog from "!raw-loader!../CHANGELOG.md";
+
+const mdConverter = new showdown.Converter({ openLinksInNewWindow: true });
 
 export default {
   name: "App",
@@ -176,7 +207,12 @@ export default {
       db: null,
       skipSettingsEvent: false,
       version: version.version,
-      roomsWithStatus: {}
+      roomsWithStatus: {},
+      showChangelog: false,
+      changelog: mdConverter.makeHtml(changelog),
+      ping: 0,
+      onlineClients: 0,
+      pingColor: "grey--text"
     };
   },
   watch: {
@@ -186,13 +222,11 @@ export default {
           newUserSettings &&
           newUserSettings.roomHistory &&
           newUserSettings.roomHistory.length > 0
-        ) {
-          let rooms = newUserSettings.roomHistory.map(r => r.id);
-          this.getRoomsStatus(rooms);
-        }
+        )
+          this.getRoomsStatus(newUserSettings.roomHistory.map(r => r.id));
         this.$vuetify.theme.dark = newUserSettings.darkMode;
-        if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
         localStorage.userSettings = JSON.stringify(newUserSettings);
+        if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
         if (!this.db || !this.currentUser) return;
         this.db
           .collection("user_settings")
@@ -231,6 +265,12 @@ export default {
             ...roomsWithStatus
           };
       });
+    },
+    getOnlineUsers: function() {
+      this.socket.emit("getOnlineUsers", users => {
+        if (!users) return;
+        this.onlineClients = users;
+      });
     }
   },
   mounted() {
@@ -242,34 +282,11 @@ export default {
     if (localStorage.userSettings) {
       this.userSettings = JSON.parse(localStorage.userSettings);
     } else {
-      if (this.db && this.currentUser) {
-        this.db
-          .collection("user_settings")
-          .doc(this.currentUser.uid)
-          .get()
-          .then(doc => {
-            if (doc.exists) {
-              this.userSettings = doc.data();
-            } else {
-              this.userSettings = {
-                darkMode: true,
-                roomHistory: []
-              };
-            }
-          })
-          .catch(error => {
-            console.error(error);
-            this.userSettings = {
-              darkMode: true,
-              roomHistory: []
-            };
-          });
-      } else {
-        this.userSettings = {
-          darkMode: true,
-          roomHistory: []
-        };
-      }
+      this.skipSettingsEvent = true;
+      this.userSettings = {
+        darkMode: true,
+        roomHistory: []
+      };
     }
 
     setTimeout(() => {
@@ -297,21 +314,29 @@ export default {
       }
     });
 
-    if (!this.socket && this.currentUser) {
-      if (this.socket && this.socket.disconnected) return this.socket.open();
-      this.currentUser
-        .getIdToken()
-        .then(token => {
-          this.socket = io(settings.socketUrl, {
-            query: {
-              token
-            }
-          });
-        })
-        .catch(e => this.alertBox.send("error", e, 10000));
-    } else if (!this.socket) {
+    if (!this.socket) {
       this.socket = io(settings.socketUrl);
     }
+
+    this.socket.on("connect", () => {
+      console.log("socket connected!");
+      if (this.userSettings && this.userSettings.roomHistory)
+        this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
+      this.getOnlineUsers();
+      this.socket.on("pong", ping => {
+        this.ping = ping;
+        this.getOnlineUsers();
+        if (ping < 50) {
+          this.pingColor = "green--text";
+        } else if (ping < 100) {
+          this.pingColor = "lime--text";
+        } else if (ping < 150) {
+          this.pingColor = "yellow--text text--darken-3";
+        } else if (ping > 200) {
+          this.pingColor = "orange--text text--darken-3";
+        }
+      });
+    });
 
     if (mode && actionCode) {
       const auth = firebase.auth();

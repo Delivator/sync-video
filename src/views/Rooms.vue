@@ -97,8 +97,16 @@
           <v-btn color="success" @click="dialog = true">Add Room</v-btn>
         </div>
         <div v-else>
-          <h4 class="display-1">You have to be logged in to create rooms.</h4>
-          <v-btn to="/login" outlined>Login</v-btn>
+          <v-row>
+            <v-col cols="12">
+              <h4 class="display-1">
+                You have to be logged in to create rooms.
+              </h4>
+            </v-col>
+            <v-col cols="12">
+              <v-btn to="/login" outlined>Login</v-btn>
+            </v-col>
+          </v-row>
         </div>
       </v-col>
     </v-row>
@@ -113,7 +121,7 @@
 import { setTimeout } from "timers";
 
 export default {
-  props: ["alertBox", "currentUser", "db", "roomsWithStatus"],
+  props: ["alertBox", "currentUser", "db", "roomsWithStatus", "getRoomsStatus"],
   data() {
     return {
       rooms: null,
@@ -134,23 +142,23 @@ export default {
   },
   methods: {
     getRooms() {
-      if (!this.currentUser) return;
-      if (this.db)
-        this.db
-          .collection("rooms")
-          .where("owner", "==", this.currentUser.uid)
-          .get()
-          .then(querySnapshot => {
-            if (!querySnapshot.empty) {
-              this.rooms = querySnapshot.docs;
-            }
-            this.loading = false;
-            return querySnapshot.docs;
-          })
-          .catch(e => {
-            this.alertBox.send("error", e, 10000);
-            this.loading = false;
-          });
+      if (!this.currentUser || !this.db) return;
+      this.db
+        .collection("rooms")
+        .where("owner", "==", this.currentUser.uid)
+        .get()
+        .then(querySnapshot => {
+          if (!querySnapshot.empty) {
+            this.rooms = querySnapshot.docs;
+            this.getRoomsStatus(querySnapshot.docs.map(r => r.id));
+          }
+          this.loading = false;
+          return querySnapshot.docs;
+        })
+        .catch(e => {
+          this.alertBox.send("error", e, 10000);
+          this.loading = false;
+        });
     },
     addRoom(event) {
       if (event) event.preventDefault();

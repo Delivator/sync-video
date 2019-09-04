@@ -38,6 +38,12 @@ html {
   display: flex;
   overflow-x: auto;
   overflow-y: hidden;
+  white-space: nowrap;
+}
+
+.user-list .v-chip {
+  margin-right: .5rem;
+  margin-bottom: .3rem;
 }
 
 .user-list::-webkit-scrollbar {

@@ -10,14 +10,12 @@
         ></v-img>
       </v-col>
 
-      <v-col cols="12" offset="0" md="8" offset-md="2">
-        <h1
-          class="display-2 font-weight-bold mb-3 text-center"
-          v-if="currentUser"
-        >
+      <v-col class="text-center" cols="12" offset="0" md="8" offset-md="2">
+        <h1 class="display-2 font-weight-bold mb-3" v-if="currentUser">
           Welcome back,
-          <span class="font-weight-light">
-            {{ currentUser.displayName || currentUser.email || "Guest" }} </span
+          <span class="font-weight-light">{{
+            currentUser.displayName || currentUser.email || "Guest"
+          }}</span
           >.
         </h1>
         <h1 class="display-2 font-weight-bold mb-3" v-else>
@@ -37,7 +35,7 @@
             <template v-for="room in userSettings.roomHistory">
               <v-col :key="room.id" cols="12" xl="3" lg="4" sm="6">
                 <v-card :to="`/r/${room.id}`" class="text-center room-card">
-                  <v-toolbar color="primary">
+                  <v-toolbar color="primary" dark>
                     <v-toolbar-title>{{ room.title }}</v-toolbar-title>
                     <v-spacer></v-spacer>
                     <v-btn
@@ -50,7 +48,7 @@
                     >
                   </v-toolbar>
                   <v-card-text>
-                    <p class="center-text">
+                    <p class="center-text text--primary">
                       {{
                         roomsWithStatus[room.id]
                           ? roomsWithStatus[room.id].usersOnline
@@ -102,7 +100,13 @@
 
 <script>
 export default {
-  props: ["alertBox", "currentUser", "userSettings", "roomsWithStatus"],
+  props: [
+    "alertBox",
+    "currentUser",
+    "userSettings",
+    "roomsWithStatus",
+    "getRoomsStatus"
+  ],
   data() {
     return {
       showVerify: true
@@ -132,6 +136,10 @@ export default {
       roomHistory = roomHistory.filter(room => room.id !== roomID);
       this.userSettings.roomHistory = roomHistory;
     }
+  },
+  mounted() {
+    if (this.userSettings && this.userSettings.roomHistory)
+      this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
   }
 };
 </script>

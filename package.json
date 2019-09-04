@@ -1,6 +1,6 @@
 {
   "name": "sync-video",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -15,6 +15,7 @@
     "firebase": "^6.4.0",
     "firebase-admin": "^8.3.0",
     "register-service-worker": "^1.6.2",
+    "showdown": "^1.9.0",
     "simple-youtube-api": "^5.2.1",
     "socket.io": "^2.2.0",
     "vue": "^2.6.10",
@@ -35,6 +36,7 @@
     "eslint-plugin-vue": "^5.0.0",
     "eslint-plugin-vuetify": "^1.0.0-beta.3",
     "prettier": "^1.18.2",
+    "raw-loader": "^3.1.0",
     "sass": "^1.17.4",
     "sass-loader": "^7.1.0",
     "vue-cli-plugin-vuetify": "^0.6.3",

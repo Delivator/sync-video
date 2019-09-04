@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const server = require("http").Server(app);
 const io = require("socket.io")(server, {
-  pingInterval: 5000
+  pingInterval: 3000
 });
 const history = require("connect-history-api-fallback");
 const fs = require("fs");
@@ -139,23 +139,27 @@ app.get("*", (req, res) => {
 });
 
 io.on("connection", socket => {
-  const token = socket.handshake.query.token;
+  socket.displayName = generateUsername();
 
-  if (token) {
+  socket.on("authenticate", token => {
+    if (!token) return;
     admin
       .auth()
       .verifyIdToken(token)
       .then(user => {
         if (user.email) socket.avatar = getGravatarUrl(user.email);
-        socket.displayName = user.name ? user.name : generateUsername();
+        if (user.name) socket.displayName = user.name;
         socket.uid = user.uid;
+        for (const r in socket.rooms) {
+          if (socket.rooms.hasOwnProperty(r)) {
+            const room = socket.rooms[r];
+            if (rooms[room])
+              io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
+          }
+        }
       })
-      .catch(e => {
-        console.error(e);
-      });
-  } else {
-    socket.displayName = generateUsername();
-  }
+      .catch(console.error);
+  });
 
   console.log(
     `[+] ${io.engine.clientsCount} client${
@@ -191,26 +195,6 @@ io.on("connection", socket => {
         }, 0);
       }
     }
-  });
-
-  socket.on("authenticate", token => {
-    if (!token) return;
-    admin
-      .auth()
-      .verifyIdToken(token)
-      .then(user => {
-        if (user.email) socket.avatar = getGravatarUrl(user.email);
-        if (user.name) socket.displayName = user.name;
-        socket.uid = user.uid;
-        for (const r in socket.rooms) {
-          if (socket.rooms.hasOwnProperty(r)) {
-            const room = socket.rooms[r];
-            if (rooms[room])
-              io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
-          }
-        }
-      })
-      .catch(console.error);
   });
 
   socket.on("sendPlayerStatusUpdate", (room, playerStatus) => {
@@ -334,6 +318,11 @@ io.on("connection", socket => {
       }
     });
     return callback(roomsWithStatus);
+  });
+
+  socket.on("getOnlineUsers", callback => {
+    if (!callback) return false;
+    return callback(io.engine.clientsCount);
   });
 });
 
