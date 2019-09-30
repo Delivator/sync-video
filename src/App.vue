@@ -237,7 +237,7 @@ export default {
       onlineClients: 0,
       pingColor: "grey--text",
       publicRooms: [],
-      showCookie: true
+      showCookie: false
     };
   },
   watch: {
