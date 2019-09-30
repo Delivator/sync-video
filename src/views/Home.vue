@@ -79,6 +79,56 @@
             </template>
           </v-row>
         </div>
+        <div v-if="publicRooms && publicRooms.length > 0">
+          <h4 class="headline"><v-icon>public</v-icon> Public rooms:</h4>
+          <v-row justify="center">
+            <template v-for="room in publicRooms">
+              <v-col :key="room.id" cols="12" xl="3" lg="4" sm="6">
+                <v-card :to="`/r/${room.id}`" class="text-center room-card">
+                  <v-toolbar color="primary" dark>
+                    <v-toolbar-title>{{ room.title }}</v-toolbar-title>
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      color="error"
+                      fab
+                      small
+                      class="room-card-close-btn"
+                      @click="removeFromHistory(room.id, $event)"
+                      ><v-icon>close</v-icon></v-btn
+                    >
+                  </v-toolbar>
+                  <v-card-text>
+                    <p class="center-text text--primary">
+                      {{
+                        roomsWithStatus[room.id]
+                          ? roomsWithStatus[room.id].usersOnline
+                          : 0
+                      }}
+                      <v-icon>person</v-icon>
+                      {{
+                        roomsWithStatus[room.id]
+                          ? roomsWithStatus[room.id].queueLengh
+                          : 0
+                      }}
+                      <v-icon>list</v-icon>
+                    </p>
+                    <p>
+                      Now Playing:
+                      <strong>
+                        {{
+                          roomsWithStatus[room.id] &&
+                          roomsWithStatus[room.id].nowPlaying
+                            ? roomsWithStatus[room.id].nowPlaying
+                            : "-/-"
+                        }}</strong
+                      >
+                    </p>
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </template>
+          </v-row>
+        </div>
         <p
           class="subheading font-weight-regular"
           v-if="
@@ -105,7 +155,8 @@ export default {
     "currentUser",
     "userSettings",
     "roomsWithStatus",
-    "getRoomsStatus"
+    "getRoomsStatus",
+    "publicRooms"
   ],
   data() {
     return {
@@ -140,6 +191,7 @@ export default {
   mounted() {
     if (this.userSettings && this.userSettings.roomHistory)
       this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
+    if (this.publicRooms) this.getRoomsStatus(this.publicRooms.map(r => r.id));
   }
 };
 </script>

@@ -1,7 +1,3 @@
-html {
-  overflow-y: auto;
-}
-
 .v-toolbar__title a, .no-link-deko {
   text-decoration: none;
 }
@@ -23,6 +19,7 @@ html {
   position: fixed;
   width: 100%;
   z-index: 2;
+  top: 74px;
 }
 
 #playerFlex {
@@ -178,4 +175,12 @@ html {
 
 .room-card:hover .room-card-close-btn {
   opacity: 100;
+}
+
+/* .cookieAlert {
+  margin-left: 1em;
+} */
+
+.cookieAlert button {
+  margin-right: .5em;
 }

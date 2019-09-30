@@ -1,4 +1,7 @@
-## [v0.3.0](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.1](https://github.com/Delivator/sync-video/commits/master)
+- Added public rooms to frontpage
+
+## [v0.3.0](https://github.com/Delivator/sync-video/commit/f0eb081d45fc072225cd30c0a57a4215366c0638)
 - Added changelog
 - Bugfixes
 

@@ -102,8 +102,26 @@
         :getRoomsStatus="getRoomsStatus"
         :ping="ping"
         :pingColor="pingColor"
+        :publicRooms="publicRooms"
       />
     </v-content>
+    <v-alert
+      color="primary"
+      outlined
+      icon="info"
+      v-model="showCookie"
+      text
+      max-width="500"
+      class="cookieAlert"
+    >
+      <p>
+        We serve cookies on this site to analyse traffic, remember your
+        preferences, and optimise your experience. By using this site you agree
+        to the Cookie Policy.
+      </p>
+      <v-btn outlined color="primary">More details</v-btn>
+      <v-btn outlined color="primary">OK</v-btn>
+    </v-alert>
     <v-footer height="auto">
       <v-row justify="center">
         <v-col class="py-3 text-center" cols="12">
@@ -164,6 +182,14 @@ import changelog from "!raw-loader!../CHANGELOG.md";
 
 const mdConverter = new showdown.Converter({ openLinksInNewWindow: true });
 
+function UserSettings(darkMode = true, roomHistory = []) {
+  return {
+    darkMode,
+    roomHistory,
+    version: version.version
+  };
+}
+
 export default {
   name: "App",
   data() {
@@ -200,10 +226,7 @@ export default {
       currentUser: null,
       gravatarUrl: null,
       socket: null,
-      userSettings: {
-        darkMode: true,
-        roomHistory: []
-      },
+      userSettings: UserSettings(),
       db: null,
       skipSettingsEvent: false,
       version: version.version,
@@ -212,22 +235,28 @@ export default {
       changelog: mdConverter.makeHtml(changelog),
       ping: 0,
       onlineClients: 0,
-      pingColor: "grey--text"
+      pingColor: "grey--text",
+      publicRooms: [],
+      showCookie: true
     };
   },
   watch: {
     userSettings: {
       handler(newUserSettings) {
+        if (!newUserSettings.version) newUserSettings = UserSettings();
+
         if (
           newUserSettings &&
           newUserSettings.roomHistory &&
           newUserSettings.roomHistory.length > 0
-        )
-          this.getRoomsStatus(newUserSettings.roomHistory.map(r => r.id));
+        ) {
+          this.getRoomsStatus(newUserSettings.roomHistory);
+        }
         this.$vuetify.theme.dark = newUserSettings.darkMode;
         localStorage.userSettings = JSON.stringify(newUserSettings);
         if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
         if (!this.db || !this.currentUser) return;
+        console.dir(newUserSettings);
         this.db
           .collection("user_settings")
           .doc(this.currentUser.uid)
@@ -283,10 +312,7 @@ export default {
       this.userSettings = JSON.parse(localStorage.userSettings);
     } else {
       this.skipSettingsEvent = true;
-      this.userSettings = {
-        darkMode: true,
-        roomHistory: []
-      };
+      this.userSettings = UserSettings();
     }
 
     setTimeout(() => {
@@ -299,6 +325,26 @@ export default {
             this.userSettings = doc.data();
           });
       }
+      if (this.db)
+        this.db
+          .collection("rooms")
+          .where("public", "==", true)
+          .get()
+          .then(querySnapshot => {
+            this.publicRooms = [];
+            querySnapshot.forEach(doc => {
+              if (doc.exists) {
+                this.publicRooms.push({
+                  id: doc.id,
+                  title: doc.data().title,
+                  usersOnline: doc.data().usersOnline || 0
+                });
+              }
+            });
+            this.publicRooms.sort((a, b) => b.usersOnline - a.usersOnline);
+            this.publicRooms = this.publicRooms.filter((r, index) => index < 4);
+          })
+          .catch(console.error);
     }, 1000);
 
     firebase.auth().onAuthStateChanged(user => {
@@ -319,9 +365,10 @@ export default {
     }
 
     this.socket.on("connect", () => {
-      console.log("socket connected!");
       if (this.userSettings && this.userSettings.roomHistory)
         this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
+      if (this.publicRooms)
+        this.getRoomsStatus(this.publicRooms.map(r => r.id));
       this.getOnlineUsers();
       this.socket.on("pong", ping => {
         this.ping = ping;

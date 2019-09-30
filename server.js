@@ -58,6 +58,8 @@ admin.initializeApp({
   databaseURL: firebaseConfig.databaseURL
 });
 
+const db = admin.firestore();
+
 app.use(history());
 app.use(express.static("./dist"));
 
@@ -90,6 +92,19 @@ function getRoomUsers(room) {
     }
   }
   return users;
+}
+
+function updateUsersOnline(room) {
+  if (!room) return;
+  const document = db.collection("rooms").doc(room);
+  document
+    .get()
+    .then(querySnapshot => {
+      let data = querySnapshot.data();
+      data.usersOnline = getRoomUsers(room).length || 0;
+      if (querySnapshot.exists) document.update(data).catch(console.error);
+    })
+    .catch(console.error);
 }
 
 // https://stackoverflow.com/a/7180095/6287225
@@ -176,6 +191,7 @@ io.on("connection", socket => {
       io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
       if (rooms[room] && rooms[room].queue)
         socket.emit("updateQueue", rooms[room].queue);
+      updateUsersOnline(room);
     }, 0);
   });
 
@@ -183,6 +199,7 @@ io.on("connection", socket => {
     if (!room || !rooms[room]) return;
     socket.leave(room);
     io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
+    updateUsersOnline(room);
   });
 
   socket.on("disconnecting", () => {

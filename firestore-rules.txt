@@ -5,13 +5,12 @@ service cloud.firestore {
     	allow list: if resource.data.public ||
       	resource.data.owner == request.auth.uid;
       allow create: if request.auth != null &&
-      	request.resource.data.owner != null &&
       	request.resource.data.owner == request.auth.uid &&
         request.resource.data.title is string &&
         request.resource.data.title.size() > 1 &&
         request.resource.data.title.size() < 64 &&
-        request.resource.data.public != null &&
         request.resource.data.public is bool &&
+        request.resource.data.usersOnline is number &&
         !exists(/databases/$(database)/documents/rooms/$(roomID));
       allow update: if request.auth != null &&
         request.resource.data.title is string &&
@@ -19,14 +18,58 @@ service cloud.firestore {
         request.resource.data.title.size() < 64 &&
         request.resource.data.public is bool &&
         resource.data.owner == request.auth.uid &&
-        // Can't change owner
-        request.resource.data.owner == resource.data.owner;
+        request.resource.data.owner == resource.data.owner; // Can't change owner
       allow delete: if request.auth != null &&
       	resource.data.owner == request.auth.uid;
     }
     match /user_settings/{userID} {
-      allow get, write: if request.auth != null &&
-        request.auth.uid == userID;
+    	function isValidRoomId(index) {
+      	return request.resource.data.roomHistory[index].id is string &&
+          request.resource.data.roomHistory[index].id.size() < 33 &&
+          request.resource.data.roomHistory[index].title is string &&
+          request.resource.data.roomHistory[index].title.size() < 65;
+      }
+    	function isValidHistory() {
+      	return request.resource.data.roomHistory is list &&
+          request.resource.data.roomHistory.size() < 5 &&
+          request.resource.data.roomHistory.size() < 1 ||
+          (
+          	request.resource.data.roomHistory.size() == 1 &&
+            isValidRoomId(0)
+          ) ||
+          (
+          	request.resource.data.roomHistory.size() == 2 &&
+            isValidRoomId(0) &&
+            isValidRoomId(1)
+          ) ||
+          (
+          	request.resource.data.roomHistory.size() == 3 &&
+            isValidRoomId(0) &&
+            isValidRoomId(1) &&
+            isValidRoomId(2)
+          ) ||
+          (
+          	request.resource.data.roomHistory.size() == 4 &&
+            isValidRoomId(0) &&
+            isValidRoomId(1) &&
+            isValidRoomId(2) &&
+            isValidRoomId(3)
+          );
+      }
+      allow create: if request.auth != null &&
+        request.auth.uid == userID && 
+        request.resource.data.darkMode is bool &&
+        isValidHistory() &&
+        request.resource.data.version is string &&
+        request.resource.data.version.size() < 6;
+      allow update: if request.auth != null &&
+      	request.auth.uid == userID &&
+        request.resource.data.darkMode is bool &&
+        isValidHistory() &&
+        request.resource.data.version is string &&
+        request.resource.data.version.size() < 6;
+      allow read: if request.auth != null &&
+      	request.auth.uid == userID;
     }
   }
 }

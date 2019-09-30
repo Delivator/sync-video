@@ -262,13 +262,13 @@
                 <v-list-item
                   v-for="video in searchResults"
                   two-line
-                  :key="video.id"
+                  :key="video.id.videoId"
                   :class="
                     userSettings.darkMode ? 'queue-item-dark' : 'queue-item'
                   "
                 >
                   <img
-                    :src="video.thumbnails.medium.url"
+                    :src="video.snippet.thumbnails.medium.url"
                     height="50"
                     width="88.889"
                     class="playlist-thumbnail"
@@ -283,18 +283,23 @@
                               : 'black--text'
                           }`
                         "
-                        :href="video.url"
+                        :href="
+                          `https://www.youtube.com/watch?v=${video.id.videoId}`
+                        "
                         target="_blank"
                         rel="noopener noreferrer"
                       >
-                        {{ parseYoutubeTitle(video.title) }}
+                        {{ parseYoutubeTitle(video.snippet.title) }}
                         <v-icon small>open_in_new</v-icon>
                       </a>
+                      <span v-if="video.duration"> {{ video.duration }}</span>
                     </v-list-item-title>
                     <v-list-item-subtitle>
                       <span class="text--primary">
                         <a
-                          :href="video.channel.url"
+                          :href="
+                            `https://www.youtube.com/channel/${video.snippet.channelId}`
+                          "
                           target="_blank"
                           rel="noopener noreferrer"
                           :class="
@@ -304,10 +309,12 @@
                                 : 'black--text'
                             }`
                           "
-                          >{{ parseYoutubeTitle(video.channel.title) }}</a
+                          >{{
+                            parseYoutubeTitle(video.snippet.channelTitle)
+                          }}</a
                         >
                       </span>
-                      &mdash; {{ video.description }}
+                      &mdash; {{ video.snippet.description }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                   <v-list-item-action>
@@ -317,10 +324,10 @@
                       @click="
                         addVideo(
                           $event,
-                          video.id,
-                          parseYoutubeTitle(video.title),
-                          video.channel.title,
-                          video.description
+                          video.id.videoId,
+                          parseYoutubeTitle(video.snippet.title),
+                          video.snippet.channelTitle,
+                          video.snippet.description
                         )
                       "
                       class="playlist-add-button"
@@ -429,9 +436,32 @@
 import YouTube from "simple-youtube-api";
 import settings from "../settings.json";
 import draggable from "vuedraggable";
+import * as iso8601duration from "iso8601-duration";
 
 const youtube = new YouTube(settings.youTubeAPIKey);
 let searchTimeout = null;
+
+// https://stackoverflow.com/a/7579799
+function convertSeconds(seconds) {
+  let hours = Math.floor(seconds / 3600);
+  let minutes = Math.floor((seconds - hours * 3600) / 60);
+  var time = "";
+  seconds = seconds - hours * 3600 - minutes * 60;
+
+  if (hours != 0) {
+    time = hours + ":";
+  }
+  if (minutes != 0 || time !== "") {
+    minutes = minutes < 10 && time !== "" ? "0" + minutes : String(minutes);
+    time += minutes + ":";
+  }
+  if (time === "") {
+    time = seconds + "s";
+  } else {
+    time += seconds < 10 ? "0" + seconds : String(seconds);
+  }
+  return time;
+}
 
 export default {
   components: {
@@ -478,7 +508,8 @@ export default {
         title: value => 1 < value.length < 65 || "1-64 Characters"
       },
       videoTitle: "",
-      showAlert: false
+      showAlert: false,
+      nextPageToken: ""
     };
   },
   computed: {
@@ -852,23 +883,85 @@ export default {
         });
       });
     },
-    searchVideo() {
+    getVideos(videos, part = "") {
+      return new Promise((resolve, reject) => {
+        let url = new URL("https://www.googleapis.com/youtube/v3/videos");
+        if (part) part = "," + part;
+        let params = {
+          key: settings.youTubeAPIKey,
+          part: "id" + part,
+          id: videos
+        };
+        Object.keys(params).forEach(key =>
+          url.searchParams.append(key, params[key])
+        );
+        fetch(url)
+          .then(result => {
+            if (result.status !== 200) return false;
+            result
+              .json()
+              .then(data => resolve(data))
+              .catch(reject);
+          })
+          .catch(reject);
+      });
+    },
+    searchVideo(query = null, nextPageToken = null) {
       if (!this.youtubeSearch || this.youtubeSearch.length < 1) return;
 
       if (searchTimeout !== null) clearTimeout(searchTimeout);
 
       searchTimeout = setTimeout(() => {
-        youtube
-          .searchVideos(this.youtubeSearch, 10)
-          .then(results => {
-            if (!results || results.length < 1)
+        let url = new URL("https://www.googleapis.com/youtube/v3/search");
+        let params = {
+          key: settings.youTubeAPIKey,
+          part: "snippet",
+          type: "video",
+          maxResults: 10,
+          q: query ? query : this.youtubeSearch
+        };
+        if (nextPageToken) params.pageToken = nextPageToken;
+        Object.keys(params).forEach(key =>
+          url.searchParams.append(key, params[key])
+        );
+        fetch(url)
+          .then(response => {
+            if (response.status !== 200)
               return console.error("[YouTube] No video found");
-            // Remove livestreams from search results
-            results = results.filter(
-              video => video.raw.snippet.liveBroadcastContent === "none"
-            );
-            this.searchResults = results;
-            this.showSearchResults = this.searchResults.length > 0;
+            response
+              .json()
+              .then(data => {
+                if (data.nextPageToken) this.nextPageToken = data.nextPageToken;
+                if (!data || !data.items || data.items.length < 1)
+                  return console.error("[YouTube] No video found");
+                console.log(data);
+                data.items = data.items.filter(
+                  video => video.snippet.liveBroadcastContent === "none"
+                );
+                this.searchResults = data.items;
+                this.showSearchResults = true;
+                let videoIds = data.items.map(video => video.id.videoId);
+                this.getVideos(videoIds.join(","), "contentDetails")
+                  .then(data => {
+                    if (!data || !data.items || data.items.length < 1) return;
+                    data.items.forEach(video => {
+                      this.searchResults.forEach((vid, i) => {
+                        console.log(vid.id.videoId, video.id);
+                        if (vid.id.videoId === video.id) {
+                          this.searchResults[i].duration = convertSeconds(
+                            iso8601duration.toSeconds(
+                              iso8601duration.parse(
+                                video.contentDetails.duration
+                              )
+                            )
+                          );
+                        }
+                      });
+                    });
+                  })
+                  .catch(console.error);
+              })
+              .catch(console.error);
           })
           .catch(console.error);
       }, 400);

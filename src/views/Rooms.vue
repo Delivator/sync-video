@@ -174,7 +174,8 @@ export default {
         .set({
           owner: this.currentUser.uid,
           title: this.title,
-          public: this.isPublic
+          public: this.isPublic,
+          usersOnline: 0
         })
         .then(() => {
           this.alertBox.send("success", "Room created", 3000);
