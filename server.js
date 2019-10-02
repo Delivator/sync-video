@@ -15,11 +15,6 @@ if (!fs.existsSync("src/settings.json")) {
     "src/settings.json not found, (See https://github.com/Delivator/sync-video#project-setup 5.)"
   );
   process.exit(1);
-} else if (!fs.existsSync("src/firebase.json")) {
-  console.log(
-    "src/firebase.json not found, (See https://github.com/Delivator/sync-video#project-setup 6.)"
-  );
-  process.exit(2);
 } else if (!fs.existsSync("serviceAccountKey.json")) {
   console.log(
     "serviceAccountKey.json not found, (See https://github.com/Delivator/sync-video#project-setup 7.)"
@@ -28,7 +23,6 @@ if (!fs.existsSync("src/settings.json")) {
 }
 
 const serviceAccount = require("./serviceAccountKey.json");
-const firebaseConfig = require("./src/firebase.json");
 const settings = require("./src/settings.json");
 let rooms = {};
 

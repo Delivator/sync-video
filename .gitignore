@@ -19,7 +19,7 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.sw?
-src/firebase.json
+src/firebaseConfig.js
 serviceAccountKey.json
 src/settings.json
 src/faviconData.json

@@ -2,6 +2,7 @@
 - Now displaying the pages title in the title
 - Now showing and saving video duration in search and queue
 - Fixed public rooms
+- Added stay logged in option to login page
 
 ## [v0.3.1](https://github.com/Delivator/sync-video/commit/6a62bd61f4ee891170a4d97d008d1b296f39614b)
 - Added public rooms to frontpage
