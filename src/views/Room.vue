@@ -440,7 +440,7 @@
 import settings from "../settings.json";
 import draggable from "vuedraggable";
 import * as iso8601duration from "iso8601-duration";
-import * as fb from "../firebaseConfig";
+import * as fb from "../fb";
 
 let searchTimeout = null;
 

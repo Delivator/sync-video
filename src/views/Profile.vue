@@ -128,7 +128,7 @@
 
 <script>
 import { MD5 } from "crypto-js";
-import * as fb from "../firebaseConfig";
+import * as fb from "../fb";
 
 export default {
   props: ["alertBox", "currentUser"],

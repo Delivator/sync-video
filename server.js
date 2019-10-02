@@ -8,6 +8,7 @@ const history = require("connect-history-api-fallback");
 const fs = require("fs");
 const admin = require("firebase-admin");
 const { MD5 } = require("crypto-js");
+const firebaseConfig = require("./src/firebaseConfig");
 
 // Check for settings files
 if (!fs.existsSync("src/settings.json")) {

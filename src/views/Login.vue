@@ -58,7 +58,7 @@
 </template>
 
 <script>
-import * as fb from "../firebaseConfig";
+import * as fb from "../fb";
 
 export default {
   props: ["alertBox"],

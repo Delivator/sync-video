@@ -101,7 +101,7 @@
 </template>
 
 <script>
-const fb = require("../firebaseConfig");
+const fb = require("../fb");
 
 export default {
   props: ["alertBox", "currentUser"],

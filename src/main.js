@@ -3,7 +3,7 @@ import App from "./App.vue";
 import router from "./router";
 import "./registerServiceWorker";
 import vuetify from "./plugins/vuetify";
-const fb = require("./firebaseConfig");
+const fb = require("./fb");
 
 Vue.config.productionTip = false;
 

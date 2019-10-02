@@ -185,7 +185,7 @@
 </template>
 
 <script>
-import * as fb from "../firebaseConfig";
+import * as fb from "../fb";
 import { isMobile } from "mobile-device-detect";
 
 export default {

@@ -174,7 +174,7 @@ import settings from "./settings.json";
 import version from "../package.json";
 import showdown from "showdown";
 import changelog from "!raw-loader!../CHANGELOG.md";
-import * as fb from "./firebaseConfig";
+import * as fb from "./fb";
 
 const mdConverter = new showdown.Converter({ openLinksInNewWindow: true });
 

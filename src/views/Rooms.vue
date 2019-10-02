@@ -119,7 +119,7 @@
 
 <script>
 import { setTimeout } from "timers";
-import * as fb from "../firebaseConfig";
+import * as fb from "../fb";
 
 export default {
   props: ["alertBox", "currentUser", "roomsWithStatus", "getRoomsStatus"],
