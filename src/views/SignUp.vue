@@ -58,8 +58,7 @@
 </template>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/auth";
+import * as fb from "../firebaseConfig";
 
 export default {
   props: ["alertBox"],
@@ -93,8 +92,7 @@ export default {
         this.$refs.displayName.validate(true);
         return;
       }
-      firebase
-        .auth()
+      fb.firebase.auth
         .createUserWithEmailAndPassword(this.email, this.password)
         .then(user => {
           if (this.displayName && this.displayName !== "")

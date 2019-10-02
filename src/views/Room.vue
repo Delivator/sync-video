@@ -16,7 +16,7 @@
                 maxlength="64"
                 ref="title"
               ></v-text-field>
-              <v-checkbox v-model="isPublic" label="Public"></v-checkbox>
+              <v-switch v-model="isPublic" label="Public"></v-switch>
             </v-card-text>
             <v-card-actions>
               <v-btn color="error" outlined @click="dialog = false"
@@ -292,7 +292,9 @@
                         {{ parseYoutubeTitle(video.snippet.title) }}
                         <v-icon small>open_in_new</v-icon>
                       </a>
-                      <span v-if="video.duration"> {{ video.duration }}</span>
+                      <span v-if="video.duration">
+                        {{ convertSeconds(video.duration) }}</span
+                      >
                     </v-list-item-title>
                     <v-list-item-subtitle>
                       <span class="text--primary">
@@ -327,7 +329,8 @@
                           video.id.videoId,
                           parseYoutubeTitle(video.snippet.title),
                           video.snippet.channelTitle,
-                          video.snippet.description
+                          video.snippet.description,
+                          video.duration ? video.duration : 0.0
                         )
                       "
                       class="playlist-add-button"
@@ -375,6 +378,7 @@
                             {{ video.title }}
                             <v-icon small>open_in_new</v-icon>
                           </a>
+                          <span> {{ convertSeconds(video.duration) }}</span>
                         </v-list-item-title>
                         <v-list-item-subtitle>
                           <span class="text--primary">
@@ -433,12 +437,11 @@
 </style>
 
 <script>
-import YouTube from "simple-youtube-api";
 import settings from "../settings.json";
 import draggable from "vuedraggable";
 import * as iso8601duration from "iso8601-duration";
+import * as fb from "../firebaseConfig";
 
-const youtube = new YouTube(settings.youTubeAPIKey);
 let searchTimeout = null;
 
 // https://stackoverflow.com/a/7579799
@@ -472,7 +475,6 @@ export default {
     "currentUser",
     "socket",
     "userSettings",
-    "db",
     "ping",
     "pingColor"
   ],
@@ -494,7 +496,7 @@ export default {
       theatre: false,
       users: [],
       preventPlayerEvents: false,
-      preventYouTubeSeekEvent: true,
+      preventYouTubeSeekEvent: false,
       firstPlayerEvent: true,
       youtubeSearch: "",
       queue: [],
@@ -509,7 +511,8 @@ export default {
       },
       videoTitle: "",
       showAlert: false,
-      nextPageToken: ""
+      nextPageToken: "",
+      convertSeconds
     };
   },
   computed: {
@@ -524,10 +527,9 @@ export default {
     updateRoom(event) {
       if (event) event.preventDefault();
       if (!this.$refs.title.valid) return this.$refs.title.validate(true);
-      if (!this.currentUser || !this.db) return;
+      if (!this.currentUser) return;
       this.dialog = false;
-      this.db
-        .collection("rooms")
+      fb.rooms
         .doc(this.roomID)
         .update({
           title: this.title,
@@ -541,21 +543,19 @@ export default {
     },
     deleteRoom(event) {
       if (event) event.preventDefault();
-      if (this.db)
-        this.db
-          .collection("rooms")
-          .doc(this.roomID)
-          .delete()
-          .then(() => {
-            let roomHistory = [];
-            this.alertBox.send("success", "Room deleted");
-            // remove current room from history
-            roomHistory = this.userSettings.roomHistory;
-            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
-            this.userSettings.roomHistory = roomHistory;
-            this.$router.replace("/");
-          })
-          .catch(e => this.alertBox.send("error", e, 10000));
+      fb.rooms
+        .doc(this.roomID)
+        .delete()
+        .then(() => {
+          let roomHistory = [];
+          this.alertBox.send("success", "Room deleted");
+          // remove current room from history
+          roomHistory = this.userSettings.roomHistory;
+          roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+          this.userSettings.roomHistory = roomHistory;
+          this.$router.replace("/");
+        })
+        .catch(e => this.alertBox.send("error", e, 10000));
       return;
     },
     toggleTheatre() {
@@ -582,6 +582,29 @@ export default {
       }
       animateScroll(30);
       e.preventDefault();
+    },
+    getVideos(videos, part = "") {
+      return new Promise((resolve, reject) => {
+        let url = new URL("https://www.googleapis.com/youtube/v3/videos");
+        if (part) part = "," + part;
+        let params = {
+          key: settings.youTubeAPIKey,
+          part: "id" + part,
+          id: videos
+        };
+        Object.keys(params).forEach(key =>
+          url.searchParams.append(key, params[key])
+        );
+        fetch(url)
+          .then(result => {
+            if (result.status !== 200) return false;
+            result
+              .json()
+              .then(data => resolve(data))
+              .catch(reject);
+          })
+          .catch(reject);
+      });
     },
     playerReady() {
       let oldTime = 0.0;
@@ -794,7 +817,14 @@ export default {
         }, 1000);
       }
     },
-    addVideo(event, videoId, title, source = "", description = "") {
+    addVideo(
+      event,
+      videoId,
+      title,
+      source = "",
+      description = "",
+      duration = 0.0
+    ) {
       if (event && event.type === "submit") event.preventDefault();
       if (!videoId) videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
       if (!videoId) return;
@@ -818,7 +848,8 @@ export default {
             videoId: videoId,
             title,
             source,
-            description
+            description,
+            duration
           };
 
           this.socket.emit("addVideo", this.roomID, options, err => {
@@ -829,6 +860,7 @@ export default {
               );
             this.alertBox.send("info", `Video ${title} added`, 2000);
           });
+          console.log(options);
         }
       };
 
@@ -840,17 +872,22 @@ export default {
         sendUpdate();
       } else {
         title = "YouTube Video";
-        youtube
-          .getVideoByID(videoId)
-          .then(video => {
-            if (!video) return console.error("[YouTube] No video found");
-            title = this.parseYoutubeTitle(video.title);
-            source = video.channel.title.substring(0, 100);
-            description = video.description.substring(0, 250);
-            sendUpdate();
+        this.getVideos(videoId, "snippet,contentDetails")
+          .then(videos => {
+            if (videos && videos.items && videos.items.length > 0) {
+              let video = videos.items[0];
+              console.log(video);
+              title = this.parseYoutubeTitle(video.snippet.title);
+              source = video.snippet.channelTitle.substring(0, 100);
+              description = video.snippet.description.substring(0, 250);
+              duration = iso8601duration.toSeconds(
+                iso8601duration.parse(video.contentDetails.duration)
+              );
+              sendUpdate();
+            }
           })
           .catch(error => {
-            console.error(error);
+            this.alertBox.send("error", error);
             sendUpdate();
           });
       }
@@ -881,29 +918,6 @@ export default {
           status: this.playerStatus.status,
           currentTime: time
         });
-      });
-    },
-    getVideos(videos, part = "") {
-      return new Promise((resolve, reject) => {
-        let url = new URL("https://www.googleapis.com/youtube/v3/videos");
-        if (part) part = "," + part;
-        let params = {
-          key: settings.youTubeAPIKey,
-          part: "id" + part,
-          id: videos
-        };
-        Object.keys(params).forEach(key =>
-          url.searchParams.append(key, params[key])
-        );
-        fetch(url)
-          .then(result => {
-            if (result.status !== 200) return false;
-            result
-              .json()
-              .then(data => resolve(data))
-              .catch(reject);
-          })
-          .catch(reject);
       });
     },
     searchVideo(query = null, nextPageToken = null) {
@@ -946,17 +960,15 @@ export default {
                     if (!data || !data.items || data.items.length < 1) return;
                     data.items.forEach(video => {
                       this.searchResults.forEach((vid, i) => {
-                        console.log(vid.id.videoId, video.id);
                         if (vid.id.videoId === video.id) {
-                          this.searchResults[i].duration = convertSeconds(
-                            iso8601duration.toSeconds(
-                              iso8601duration.parse(
-                                video.contentDetails.duration
-                              )
-                            )
+                          this.searchResults[
+                            i
+                          ].duration = iso8601duration.toSeconds(
+                            iso8601duration.parse(video.contentDetails.duration)
                           );
                         }
                       });
+                      this.$forceUpdate();
                     });
                   })
                   .catch(console.error);
@@ -964,7 +976,7 @@ export default {
               .catch(console.error);
           })
           .catch(console.error);
-      }, 400);
+      }, 300);
     },
     parseYoutubeTitle(title) {
       if (!title) return;
@@ -1008,49 +1020,44 @@ export default {
   mounted() {
     let roomHistory = [];
 
-    if (this.db) {
-      this.db
-        .collection("rooms")
-        .doc(this.roomID)
-        .get()
-        .then(querySnapshot => {
-          this.loading = false;
-          if (querySnapshot.exists) {
-            this.roomData = querySnapshot.data();
-            this.title = this.roomData.title;
-            this.path = querySnapshot.id;
-            this.isPublic = this.roomData.public;
-            // load current room history
-            roomHistory = this.userSettings.roomHistory;
-            // remove current room from history
-            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
-            // add current room to the beginning of history
-            roomHistory.unshift({
-              id: this.roomID,
-              title: this.roomData.title
-            });
-            // keep room history <= 4
-            if (roomHistory.length > 4) roomHistory.pop();
-            // save room history in user settings
-            this.userSettings.roomHistory = roomHistory;
-          } else {
-            // remove current room from history
-            roomHistory = this.userSettings.roomHistory;
-            roomHistory = roomHistory.filter(room => room.id !== this.roomID);
-            this.userSettings.roomHistory = roomHistory;
-          }
-        })
-        .catch(e => {
-          this.alertBox.send("error", e, 10000);
-          this.loading = false;
-        });
-      this.db
-        .collection("rooms")
-        .doc(this.roomID)
-        .onSnapshot(documentSnapshot => {
-          this.roomData = documentSnapshot.data();
-        });
-    }
+    fb.rooms
+      .doc(this.roomID)
+      .get()
+      .then(querySnapshot => {
+        this.loading = false;
+        if (querySnapshot.exists) {
+          this.roomData = querySnapshot.data();
+          this.title = this.roomData.title;
+          this.path = querySnapshot.id;
+          this.isPublic = this.roomData.public;
+          // load current room history
+          roomHistory = this.userSettings.roomHistory;
+          // remove current room from history
+          roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+          // add current room to the beginning of history
+          roomHistory.unshift({
+            id: this.roomID,
+            title: this.roomData.title
+          });
+          // keep room history <= 4
+          if (roomHistory.length > 4) roomHistory.pop();
+          // save room history in user settings
+          this.userSettings.roomHistory = roomHistory;
+          document.title = "Sync Video - " + this.roomData.title;
+        } else {
+          // remove current room from history
+          roomHistory = this.userSettings.roomHistory;
+          roomHistory = roomHistory.filter(room => room.id !== this.roomID);
+          this.userSettings.roomHistory = roomHistory;
+        }
+      })
+      .catch(e => {
+        this.alertBox.send("error", e, 10000);
+        this.loading = false;
+      });
+    fb.rooms.doc(this.roomID).onSnapshot(documentSnapshot => {
+      this.roomData = documentSnapshot.data();
+    });
   }
 };
 </script>

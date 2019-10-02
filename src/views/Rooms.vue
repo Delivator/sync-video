@@ -53,7 +53,7 @@
               <template v-for="room in rooms">
                 <v-col :key="room.id" cols="12" xl="3" lg="4" sm="6">
                   <v-card :to="`/r/${room.id}`">
-                    <v-toolbar color="primary">
+                    <v-toolbar color="primary" dark>
                       <v-toolbar-title>{{ room.data().title }}</v-toolbar-title>
                     </v-toolbar>
                     <v-card-text>
@@ -119,9 +119,10 @@
 
 <script>
 import { setTimeout } from "timers";
+import * as fb from "../firebaseConfig";
 
 export default {
-  props: ["alertBox", "currentUser", "db", "roomsWithStatus", "getRoomsStatus"],
+  props: ["alertBox", "currentUser", "roomsWithStatus", "getRoomsStatus"],
   data() {
     return {
       rooms: null,
@@ -142,9 +143,8 @@ export default {
   },
   methods: {
     getRooms() {
-      if (!this.currentUser || !this.db) return;
-      this.db
-        .collection("rooms")
+      if (!this.currentUser) return;
+      fb.rooms
         .where("owner", "==", this.currentUser.uid)
         .get()
         .then(querySnapshot => {
@@ -167,9 +167,8 @@ export default {
         this.$refs.path.validate(true);
         return;
       }
-      if (!this.currentUser || !this.db) return;
-      this.db
-        .collection("rooms")
+      if (!this.currentUser) return;
+      fb.rooms
         .doc(this.path)
         .set({
           owner: this.currentUser.uid,
@@ -205,14 +204,12 @@ export default {
         this.title = `${this.currentUser.displayName}'s Room`;
         this.path = this.generateRoomPath(this.currentUser.displayName);
       }
-      if (this.db)
-        this.db
-          .collection("rooms")
-          .where("owner", "==", this.currentUser.uid)
-          .onSnapshot(documentSnapshot => {
-            if (!documentSnapshot.empty) this.rooms = documentSnapshot.docs;
-            this.loading = false;
-          });
+      fb.rooms
+        .where("owner", "==", this.currentUser.uid)
+        .onSnapshot(documentSnapshot => {
+          if (!documentSnapshot.empty) this.rooms = documentSnapshot.docs;
+          this.loading = false;
+        });
     } else {
       this.loading = false;
     }

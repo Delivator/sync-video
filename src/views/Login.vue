@@ -32,6 +32,12 @@
                   v-model="password"
                   ref="password"
                 ></v-text-field>
+                <v-spacer></v-spacer>
+                <v-switch
+                  v-model="keepLoggedIn"
+                  label="Keep logged in"
+                  @change="changeAuthStatePersistence"
+                ></v-switch>
               </div>
             </v-card-text>
             <v-card-actions>
@@ -39,7 +45,9 @@
                 <v-icon>keyboard_arrow_left</v-icon>Sign Up
               </v-btn>
               <v-spacer></v-spacer>
-              <v-btn @click="resetPassword" color="error">Reset Password</v-btn>
+              <v-btn @click="resetPassword" color="error" outlined
+                >Reset Password</v-btn
+              >
               <v-btn @click="login" color="success" type="submit">Login</v-btn>
             </v-card-actions>
           </v-card>
@@ -50,8 +58,7 @@
 </template>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/auth";
+import * as fb from "../firebaseConfig";
 
 export default {
   props: ["alertBox"],
@@ -68,7 +75,8 @@ export default {
           const pattern = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
           return pattern.test(value) || "Invalid e-mail.";
         }
-      }
+      },
+      keepLoggedIn: true
     };
   },
   methods: {
@@ -79,8 +87,7 @@ export default {
         return;
       }
       this.loading = true;
-      firebase
-        .auth()
+      fb.auth
         .signInWithEmailAndPassword(this.email, this.password)
         .then(() => {
           this.loading = false;
@@ -98,8 +105,7 @@ export default {
         return;
       }
       this.loading = true;
-      firebase
-        .auth()
+      fb.auth
         .sendPasswordResetEmail(this.email)
         .then(() => {
           this.loading = false;
@@ -110,6 +116,17 @@ export default {
           this.loading = false;
           this.alertBox.send("error", e, 10000);
         });
+    },
+    changeAuthStatePersistence: function() {
+      if (this.keepLoggedIn) {
+        fb.auth
+          .setPersistence(fb.firebase.auth.Auth.Persistence.LOCAL)
+          .catch(e => this.alertBox.send("error", e));
+      } else {
+        fb.auth
+          .setPersistence(fb.firebase.auth.Auth.Persistence.SESSION)
+          .catch(e => this.alertBox.send("error", e));
+      }
     }
   }
 };

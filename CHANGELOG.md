@@ -1,4 +1,9 @@
-## [v0.3.1](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.2](https://github.com/Delivator/sync-video/commits/master)
+- Now displaying the pages title in the title
+- Now showing and saving video duration in search and queue
+- Fixed public rooms
+
+## [v0.3.1](https://github.com/Delivator/sync-video/commit/6a62bd61f4ee891170a4d97d008d1b296f39614b)
 - Added public rooms to frontpage
 
 ## [v0.3.0](https://github.com/Delivator/sync-video/commit/f0eb081d45fc072225cd30c0a57a4215366c0638)

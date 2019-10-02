@@ -97,12 +97,10 @@
         :currentUser="currentUser"
         :socket="socket"
         :userSettings="userSettings"
-        :db="db"
         :roomsWithStatus="roomsWithStatus"
         :getRoomsStatus="getRoomsStatus"
         :ping="ping"
         :pingColor="pingColor"
-        :publicRooms="publicRooms"
       />
     </v-content>
     <v-alert
@@ -170,15 +168,13 @@
 </style>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/auth";
-import "firebase/firestore";
 import io from "socket.io-client";
 import { MD5 } from "crypto-js";
 import settings from "./settings.json";
 import version from "../package.json";
 import showdown from "showdown";
 import changelog from "!raw-loader!../CHANGELOG.md";
+import * as fb from "./firebaseConfig";
 
 const mdConverter = new showdown.Converter({ openLinksInNewWindow: true });
 
@@ -223,11 +219,10 @@ export default {
           });
         }
       },
-      currentUser: null,
+      currentUser: fb.currentUser,
       gravatarUrl: null,
       socket: null,
       userSettings: UserSettings(),
-      db: null,
       skipSettingsEvent: false,
       version: version.version,
       roomsWithStatus: {},
@@ -236,7 +231,6 @@ export default {
       ping: 0,
       onlineClients: 0,
       pingColor: "grey--text",
-      publicRooms: [],
       showCookie: false
     };
   },
@@ -255,10 +249,8 @@ export default {
         this.$vuetify.theme.dark = newUserSettings.darkMode;
         localStorage.userSettings = JSON.stringify(newUserSettings);
         if (this.skipSettingsEvent) return (this.skipSettingsEvent = false);
-        if (!this.db || !this.currentUser) return;
-        console.dir(newUserSettings);
-        this.db
-          .collection("user_settings")
+        if (!this.currentUser) return;
+        fb.user_settings
           .doc(this.currentUser.uid)
           .set(newUserSettings)
           .catch(console.error);
@@ -268,8 +260,7 @@ export default {
   },
   methods: {
     signOut: function() {
-      firebase
-        .auth()
+      fb.auth
         .signOut()
         .then(() => {
           this.alertBox.send("info", "Logged out", 3000);
@@ -306,8 +297,6 @@ export default {
     const mode = this.$route.query.mode;
     const actionCode = this.$route.query.oobCode;
 
-    if (!this.db) this.db = firebase.firestore();
-
     if (localStorage.userSettings) {
       this.userSettings = JSON.parse(localStorage.userSettings);
     } else {
@@ -315,39 +304,14 @@ export default {
       this.userSettings = UserSettings();
     }
 
-    setTimeout(() => {
-      if (this.db && this.currentUser) {
-        this.db
-          .collection("user_settings")
-          .doc(this.currentUser.uid)
-          .onSnapshot(doc => {
-            this.skipSettingsEvent = true;
-            this.userSettings = doc.data();
-          });
-      }
-      if (this.db)
-        this.db
-          .collection("rooms")
-          .where("public", "==", true)
-          .get()
-          .then(querySnapshot => {
-            this.publicRooms = [];
-            querySnapshot.forEach(doc => {
-              if (doc.exists) {
-                this.publicRooms.push({
-                  id: doc.id,
-                  title: doc.data().title,
-                  usersOnline: doc.data().usersOnline || 0
-                });
-              }
-            });
-            this.publicRooms.sort((a, b) => b.usersOnline - a.usersOnline);
-            this.publicRooms = this.publicRooms.filter((r, index) => index < 4);
-          })
-          .catch(console.error);
-    }, 1000);
+    if (this.currentUser) {
+      fb.user_settings.doc(this.currentUser.uid).onSnapshot(doc => {
+        this.skipSettingsEvent = true;
+        this.userSettings = doc.data();
+      });
+    }
 
-    firebase.auth().onAuthStateChanged(user => {
+    fb.auth.onAuthStateChanged(user => {
       this.currentUser = user;
       this.$root.$emit("onAuthStateChanged", user);
       if (user && this.socket && this.socket.connected) {
@@ -367,8 +331,6 @@ export default {
     this.socket.on("connect", () => {
       if (this.userSettings && this.userSettings.roomHistory)
         this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
-      if (this.publicRooms)
-        this.getRoomsStatus(this.publicRooms.map(r => r.id));
       this.getOnlineUsers();
       this.socket.on("pong", ping => {
         this.ping = ping;
@@ -386,10 +348,9 @@ export default {
     });
 
     if (mode && actionCode) {
-      const auth = firebase.auth();
       switch (mode) {
         case "resetPassword":
-          auth
+          fb.auth
             .verifyPasswordResetCode(actionCode)
             .then(email => {
               this.$router.push({
@@ -406,12 +367,11 @@ export default {
             });
           break;
         case "recoverEmail":
-          auth
+          fb.auth
             .checkActionCode(actionCode)
             .then(() => {
-              auth.applyActionCode(actionCode).then(() => {
-                if (firebase.auth().currentUser)
-                  firebase.auht().currentUser.reload();
+              fb.auth.applyActionCode(actionCode).then(() => {
+                if (fb.currentUser) fb.currentUser.reload();
                 this.alertBox.send("success", "Email address recovered", 3000);
               });
             })
@@ -419,11 +379,10 @@ export default {
           this.$router.replace("/");
           break;
         case "verifyEmail":
-          auth
+          fb.auth
             .applyActionCode(actionCode)
             .then(() => {
-              if (firebase.auth().currentUser)
-                firebase.auth().currentUser.reload();
+              if (fb.currentUser) fb.currentUser.reload();
               this.alertBox.send("success", "Email address verified", 5000);
             })
             .catch(e => this.alertBox.send("error", e, 10000));

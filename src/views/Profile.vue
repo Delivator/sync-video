@@ -127,9 +127,8 @@
 </style>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/auth";
 import { MD5 } from "crypto-js";
+import * as fb from "../firebaseConfig";
 
 export default {
   props: ["alertBox", "currentUser"],
@@ -163,7 +162,7 @@ export default {
   methods: {
     reauthenticateAndChangeEmail(event) {
       if (event) event.preventDefault();
-      const cred = firebase.auth.EmailAuthProvider.credential(
+      const cred = fb.firebase.auth.EmailAuthProvider.credential(
         this.loginEmail,
         this.loginPassword
       );
@@ -202,7 +201,7 @@ export default {
         .updateProfile({ displayName: this.displayName })
         .then(() => {
           this.alertBox.send("success", "Username updated", 3000);
-          this.currentUser = firebase.auth().currentUser;
+          this.currentUser = fb.currentUser;
           this.checkDisplayNameInput();
         })
         .catch(e => this.alertBox.send("error", e, 10000));

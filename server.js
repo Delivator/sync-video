@@ -59,6 +59,7 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+const rooms_collection = db.collection("rooms");
 
 app.use(history());
 app.use(express.static("./dist"));
@@ -96,13 +97,14 @@ function getRoomUsers(room) {
 
 function updateUsersOnline(room) {
   if (!room) return;
-  const document = db.collection("rooms").doc(room);
-  document
+  let doc = rooms_collection.doc(room);
+  doc
     .get()
     .then(querySnapshot => {
-      let data = querySnapshot.data();
-      data.usersOnline = getRoomUsers(room).length || 0;
-      if (querySnapshot.exists) document.update(data).catch(console.error);
+      if (querySnapshot.exists)
+        doc
+          .update({ usersOnline: getRoomUsers(room).length || 0 })
+          .catch(console.error);
     })
     .catch(console.error);
 }
@@ -141,6 +143,16 @@ Array.prototype.move2 = function(pos1, pos2) {
   }
 };
 
+rooms_collection
+  .where("public", "==", true)
+  .get()
+  .then(querySnapshot => {
+    querySnapshot.forEach(doc => {
+      if (doc.exists) updateUsersOnline(doc.id);
+    });
+  })
+  .catch(console.error);
+
 // Handle if the dist directory doesn't exist (App hasn't been build yet)
 app.get("*", (req, res) => {
   if (!fs.existsSync("./dist")) {
@@ -155,6 +167,14 @@ app.get("*", (req, res) => {
 
 io.on("connection", socket => {
   socket.displayName = generateUsername();
+
+  socket.on("disconnect", () => {
+    console.log(
+      `[-] ${io.engine.clientsCount} client${
+        io.engine.clientsCount > 1 ? "s" : ""
+      } connected`
+    );
+  });
 
   socket.on("authenticate", token => {
     if (!token) return;
@@ -236,6 +256,10 @@ io.on("connection", socket => {
     videoObj.description = String(videoObj.description).substring(0, 250);
     // max video id length 11 characters
     videoObj.videoId = String(videoObj.videoId).substring(0, 11);
+    videoObj.duration =
+      isNaN(videoObj.duration) || videoObj.duration < 0
+        ? 0.0
+        : videoObj.duration;
     // create a unique id for each entry
     videoObj.uid = MD5(
       videoObj.videoId + new Date().getTime().toString()

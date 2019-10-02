@@ -3,15 +3,21 @@ import App from "./App.vue";
 import router from "./router";
 import "./registerServiceWorker";
 import vuetify from "./plugins/vuetify";
-import firebase from "firebase/app";
-import firebaseConfig from "./firebase.json";
+const fb = require("./firebaseConfig");
 
 Vue.config.productionTip = false;
 
-firebase.initializeApp(firebaseConfig.config);
+router.beforeEach((to, from, next) => {
+  document.title = to.meta.title
+    ? "Sync Video - " + to.meta.title
+    : "Sync Video";
+  next();
+});
 
-new Vue({
-  router,
-  vuetify,
-  render: h => h(App)
-}).$mount("#app");
+fb.auth.onAuthStateChanged(() => {
+  new Vue({
+    router,
+    vuetify,
+    render: h => h(App)
+  }).$mount("#app");
+});

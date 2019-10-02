@@ -101,8 +101,7 @@
 </template>
 
 <script>
-import firebase from "firebase/app";
-import "firebase/auth";
+const fb = require("../firebaseConfig");
 
 export default {
   props: ["alertBox", "currentUser"],
@@ -137,7 +136,7 @@ export default {
         this.$refs.loginPassword.validate(true);
         return;
       }
-      const cred = firebase.auth.EmailAuthProvider.credential(
+      const cred = fb.firebase.auth.EmailAuthProvider.credential(
         this.loginEmail,
         this.loginPassword
       );
@@ -152,13 +151,12 @@ export default {
         this.$refs.password.validate(true);
         return;
       }
-      firebase
-        .auth()
+      fb.auth
         .confirmPasswordReset(this.actionCode, this.password)
         .then(() => {
           this.alertBox.send(
             "success",
-            "Password changed. You can now log in wiht your new password."
+            "Password changed. You can now log in with your new password."
           );
           this.$router.replace("/login");
         })

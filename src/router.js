@@ -21,12 +21,18 @@ export default new Router({
     {
       path: "/login",
       name: "login",
-      component: () => import("./views/Login")
+      component: () => import("./views/Login"),
+      meta: {
+        title: "Login"
+      }
     },
     {
       path: "/sign-up",
       name: "sign-up",
-      component: () => import("./views/SignUp")
+      component: () => import("./views/SignUp"),
+      meta: {
+        title: "Sign Up"
+      }
     },
     {
       path: "/r/:id",
@@ -36,21 +42,33 @@ export default new Router({
     {
       path: "/reset-password",
       name: "reset-password",
-      component: () => import("./views/ResetPassword")
+      component: () => import("./views/ResetPassword"),
+      meta: {
+        title: "Reset Password"
+      }
     },
     {
       path: "/profile",
       name: "profile",
-      component: () => import("./views/Profile")
+      component: () => import("./views/Profile"),
+      meta: {
+        title: "Profile"
+      }
     },
     {
       path: "/rooms",
       name: "rooms",
-      component: () => import("./views/Rooms")
+      component: () => import("./views/Rooms"),
+      meta: {
+        title: "Rooms"
+      }
     },
     {
       path: "*",
-      component: NotFound
+      component: NotFound,
+      meta: {
+        title: "404 Not Found"
+      }
     }
   ]
 });
