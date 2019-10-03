@@ -314,21 +314,31 @@ export default {
     fb.auth.onAuthStateChanged(user => {
       this.currentUser = user;
       this.$root.$emit("onAuthStateChanged", user);
-      if (user && this.socket && this.socket.connected) {
-        user
-          .getIdToken()
-          .then(token => {
-            this.socket.emit("authenticate", token);
-          })
-          .catch(e => this.alertBox.send("error", e, 10000));
+      if (this.socket && this.socket.connected && fb.token) {
+        this.socket.emit("authenticate", fb.token);
+      } else if (!this.socket && fb.token) {
+        this.socket = io(settings.socketUrl, {
+          query: {
+            token: fb.token
+          }
+        });
       }
     });
 
     if (!this.socket) {
-      this.socket = io(settings.socketUrl);
+      if (fb.token) {
+        this.socket = io(settings.socketUrl, {
+          query: {
+            token: fb.token
+          }
+        });
+      } else {
+        this.socket = io(settings.socketUrl);
+      }
     }
 
     this.socket.on("connect", () => {
+      if (fb.token) this.socket.emit("authenticate", fb.token);
       if (this.userSettings && this.userSettings.roomHistory)
         this.getRoomsStatus(this.userSettings.roomHistory.map(r => r.id));
       this.getOnlineUsers();

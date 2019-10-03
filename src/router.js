@@ -3,9 +3,11 @@ import Router from "vue-router";
 import Home from "./views/Home.vue";
 import NotFound from "./views/NotFound";
 import VueYoutube from "vue-youtube";
+import VueObserveVisibility from "vue-observe-visibility";
 
 Vue.use(Router);
 Vue.use(VueYoutube);
+Vue.use(VueObserveVisibility);
 
 export default new Router({
   mode: "history",

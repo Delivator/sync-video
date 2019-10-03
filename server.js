@@ -25,6 +25,16 @@ if (!fs.existsSync("src/settings.json")) {
 
 const serviceAccount = require("./serviceAccountKey.json");
 const settings = require("./src/settings.json");
+
+// Initialize firebase admin SDK
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: firebaseConfig.databaseURL
+});
+
+const db = admin.firestore();
+const rooms_collection = db.collection("rooms");
+
 let rooms = {};
 
 class PlayerStatus {
@@ -46,15 +56,6 @@ class Room {
     this.lastRemove = lastRemove;
   }
 }
-
-// Initialize firebase admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  databaseURL: firebaseConfig.databaseURL
-});
-
-const db = admin.firestore();
-const rooms_collection = db.collection("rooms");
 
 app.use(history());
 app.use(express.static("./dist"));
@@ -90,7 +91,7 @@ function getRoomUsers(room) {
   return users;
 }
 
-function updateUsersOnline(room) {
+function updateUsersOnline(room, users) {
   if (!room) return;
   let doc = rooms_collection.doc(room);
   doc
@@ -98,7 +99,9 @@ function updateUsersOnline(room) {
     .then(querySnapshot => {
       if (querySnapshot.exists)
         doc
-          .update({ usersOnline: getRoomUsers(room).length || 0 })
+          .update({
+            usersOnline: users ? users : getRoomUsers(room).length
+          })
           .catch(console.error);
     })
     .catch(console.error);
@@ -161,7 +164,20 @@ app.get("*", (req, res) => {
 });
 
 io.on("connection", socket => {
-  socket.displayName = generateUsername();
+  const handshakeToken = socket.handshake.query.token;
+  if (handshakeToken) {
+    admin
+      .auth()
+      .verifyIdToken(handshakeToken)
+      .then(user => {
+        if (user.email) socket.avatar = getGravatarUrl(user.email);
+        socket.displayName = user.name ? user.name : generateUsername();
+        socket.uid = user.uid;
+      })
+      .catch(console.error);
+  } else {
+    socket.displayName = generateUsername();
+  }
 
   socket.on("disconnect", () => {
     console.log(

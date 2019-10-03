@@ -260,9 +260,9 @@
               </h6>
               <v-list two-line v-show="showSearchResults">
                 <v-list-item
-                  v-for="video in searchResults"
+                  v-for="(video, index) in searchResults"
                   two-line
-                  :key="video.id.videoId"
+                  :key="index"
                   :class="
                     userSettings.darkMode ? 'queue-item-dark' : 'queue-item'
                   "
@@ -339,6 +339,15 @@
                     </v-btn>
                   </v-list-item-action>
                 </v-list-item>
+                <v-row v-observe-visibility="loadNext">
+                  <v-col cols="12" class="text-center">
+                    <v-progress-circular
+                      indeterminate
+                      color="primary"
+                      v-show="showSearchLoading"
+                    ></v-progress-circular>
+                  </v-col>
+                </v-row>
               </v-list>
               <v-list two-line v-show="queue.length > 0 && !showSearchResults">
                 <draggable @end="playlistSortEnd($event)" filter="a, i.v-icon">
@@ -387,7 +396,6 @@
                           &mdash; {{ video.description }}
                         </v-list-item-subtitle>
                       </v-list-item-content>
-                      <v-spacer></v-spacer>
                       <v-icon
                         v-if="index !== 0"
                         @click="moveVideo(video.uid, 0)"
@@ -512,7 +520,9 @@ export default {
       videoTitle: "",
       showAlert: false,
       nextPageToken: "",
-      convertSeconds
+      convertSeconds,
+      loadNextVisible: false,
+      showSearchLoading: false
     };
   },
   computed: {
@@ -938,6 +948,7 @@ export default {
         Object.keys(params).forEach(key =>
           url.searchParams.append(key, params[key])
         );
+        this.showSearchLoading = true;
         fetch(url)
           .then(response => {
             if (response.status !== 200)
@@ -948,11 +959,16 @@ export default {
                 if (data.nextPageToken) this.nextPageToken = data.nextPageToken;
                 if (!data || !data.items || data.items.length < 1)
                   return console.error("[YouTube] No video found");
+                this.showSearchLoading = false;
                 console.log(data);
                 data.items = data.items.filter(
                   video => video.snippet.liveBroadcastContent === "none"
                 );
-                this.searchResults = data.items;
+                if (nextPageToken) {
+                  this.searchResults = this.searchResults.concat(data.items);
+                } else {
+                  this.searchResults = data.items;
+                }
                 this.showSearchResults = true;
                 let videoIds = data.items.map(video => video.id.videoId);
                 this.getVideos(videoIds.join(","), "contentDetails")
@@ -975,7 +991,10 @@ export default {
               })
               .catch(console.error);
           })
-          .catch(console.error);
+          .catch(error => {
+            console.error(error);
+            this.showSearchLoading = false;
+          });
       }, 300);
     },
     parseYoutubeTitle(title) {
@@ -1009,6 +1028,12 @@ export default {
       } else if (document.msExitFullscreen) {
         document.msExitFullscreen();
       }
+    },
+    loadNext(isVisible) {
+      if (!this.loadNextVisible && isVisible && this.nextPageToken) {
+        this.searchVideo(null, this.nextPageToken);
+      }
+      this.loadNextVisible = isVisible;
     }
   },
   beforeRouteLeave(to, from, next) {

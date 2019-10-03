@@ -1,4 +1,8 @@
-## [v0.3.2](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.3](https://github.com/Delivator/sync-video/commits/master)
+- Added infinite scrolling to youtube search
+- Bugfixes
+
+## [v0.3.2](https://github.com/Delivator/sync-video/commit/89c430ebd8950a31a9b31b522c4bb7d8a0c5589c)
 - Now displaying the pages title in the title
 - Now showing and saving video duration in search and queue
 - Fixed public rooms

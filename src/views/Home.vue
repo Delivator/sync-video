@@ -80,7 +80,12 @@
           </v-row>
         </div>
         <div
-          v-if="publicRooms && publicRooms.length > 0 && publicRooms.length < 5"
+          v-if="
+            publicRooms &&
+              publicRooms.length > 0 &&
+              !isMobile &&
+              publicRooms.length < 5
+          "
         >
           <h4 class="headline"><v-icon>public</v-icon> Public rooms:</h4>
           <v-row justify="center">
@@ -120,9 +125,12 @@
         </div>
         <div
           v-else-if="
-            publicRooms && publicRooms.length > 0 && publicRooms.length > 4
+            publicRooms &&
+              publicRooms.length > 0 &&
+              (publicRooms.length > 4 || isMobile)
           "
         >
+          <h4 class="headline"><v-icon>public</v-icon> Public rooms:</h4>
           <v-carousel hide-delimiters height="auto">
             <v-carousel-item
               v-for="(rooms, index) in splitArray(publicRooms)"
@@ -199,7 +207,8 @@ export default {
   data() {
     return {
       showVerify: true,
-      publicRooms: []
+      publicRooms: [],
+      isMobile
     };
   },
   methods: {
@@ -227,15 +236,15 @@ export default {
       this.userSettings.roomHistory = roomHistory;
     },
     splitArray(arr) {
-      if (arr.length < 5) {
-        return arr;
-      } else if (isMobile) {
+      if (isMobile) {
         let newArr = [];
         arr.forEach((item, index) => {
           newArr[index] = [item];
         });
         console.log(newArr);
         return newArr;
+      } else if (arr.length < 5) {
+        return arr;
       } else {
         let newArr = [];
         for (let i = 0; i < Math.ceil(arr.length / 4); i++) {
