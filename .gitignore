@@ -23,3 +23,4 @@ src/firebaseConfig.js
 serviceAccountKey.json
 src/settings.json
 src/faviconData.json
+np.js

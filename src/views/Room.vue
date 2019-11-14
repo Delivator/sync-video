@@ -683,6 +683,8 @@ export default {
             this.socket.on("playerStatusUpdate", playerStatus => {
               if (playerStatus && playerStatus.status)
                 this.playerStatus = playerStatus;
+              if (!this.queue[0] || this.queue[0].videoSource !== "youtube")
+                return false;
               if (playerStatus.status === "pause") {
                 this.youTubePlayer
                   .getPlayerState()
@@ -751,6 +753,7 @@ export default {
                 // when the queue is empty
                 this.playerData.videoSource = "";
                 this.playerData.videoId = "null";
+                this.closeFullscreen();
               }
             });
           }
@@ -870,7 +873,6 @@ export default {
               );
             this.alertBox.send("info", `Video ${title} added`, 2000);
           });
-          console.log(options);
         }
       };
 
@@ -886,7 +888,6 @@ export default {
           .then(videos => {
             if (videos && videos.items && videos.items.length > 0) {
               let video = videos.items[0];
-              console.log(video);
               title = this.parseYoutubeTitle(video.snippet.title);
               source = video.snippet.channelTitle.substring(0, 100);
               description = video.snippet.description.substring(0, 250);
@@ -960,7 +961,6 @@ export default {
                 if (!data || !data.items || data.items.length < 1)
                   return console.error("[YouTube] No video found");
                 this.showSearchLoading = false;
-                console.log(data);
                 data.items = data.items.filter(
                   video => video.snippet.liveBroadcastContent === "none"
                 );

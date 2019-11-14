@@ -21,15 +21,12 @@
         <h1 class="display-2 font-weight-bold mb-3" v-else>
           Welcome to Sync Video!
         </h1>
-        <v-divider
-          class="divider-margin"
-          v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0"
-        ></v-divider>
       </v-col>
       <v-col cols="12" offset="0" md="8" offset-md="2">
         <div
           v-if="userSettings.roomHistory && userSettings.roomHistory.length > 0"
         >
+          <v-divider class="divider-margin"></v-divider>
           <h4 class="headline"><v-icon>history</v-icon> Recent rooms:</h4>
           <v-row justify="center">
             <template v-for="room in userSettings.roomHistory">
@@ -87,6 +84,7 @@
               publicRooms.length < 5
           "
         >
+          <v-divider class="divider-margin"></v-divider>
           <h4 class="headline"><v-icon>public</v-icon> Public rooms:</h4>
           <v-row justify="center">
             <template v-for="room in publicRooms">

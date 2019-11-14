@@ -1,7 +1,6 @@
 import Vue from "vue";
 import App from "./App.vue";
 import router from "./router";
-import "./registerServiceWorker";
 import vuetify from "./plugins/vuetify";
 const fb = require("./fb");
 
