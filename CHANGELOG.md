@@ -1,4 +1,8 @@
-## [v0.3.3](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.4](https://github.com/Delivator/sync-video/commits/master)
+- Added chat
+- Usernames are now generated based on users IP
+
+## [v0.3.3](https://github.com/Delivator/sync-video/commit/4990ddb08835020a3eb98057de505c784ed8cfee)
 - Added infinite scrolling to youtube search
 - Bugfixes
 

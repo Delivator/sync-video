@@ -9,6 +9,7 @@ const fs = require("fs");
 const admin = require("firebase-admin");
 const { MD5 } = require("crypto-js");
 const firebaseConfig = require("./src/firebaseConfig");
+const seedrandom = require("seedrandom");
 
 // Check for settings files
 if (!fs.existsSync("src/settings.json")) {
@@ -57,14 +58,30 @@ class Room {
   }
 }
 
+class Message {
+  constructor(
+    type = "info",
+    user,
+    avatar = "",
+    message = "",
+    timestamp = new Date().getTime()
+  ) {
+    this.type = type;
+    this.user = user;
+    this.message = message;
+    this.avatar = avatar;
+    this.timestamp = timestamp;
+  }
+}
+
 app.use(history());
 app.use(express.static("./dist"));
 
-function generateUsername() {
+function generateUsername(seed = Math.random()) {
   const animals =
     "🐵🐒🦍🐶🐕🐩🐺🦊🦝🐱🐈🦁🐯🐅🐆🐴🐎🦄🦓🦌🐮🐂🐃🐄🐷🐖🐗🐽🐏🐑🐐🐪🐫🦙🦒🐘🦏🦛🐭🐁🐀🐹🐰🐇🦔🦇🐻🐨🐼🦘🦡🦃🐔🐓🐣🐤🐥🐦🐧🕊🦅🦆🦢🦉🦚🦜🐸🐊🐢🦎🐍🐲🐉🦕🦖🐳🐋🐬🐟🐠🐡🦈🐙🐚🦀🦞🦐🦑🐌🦋🐛🐜🐝🐞🦗🕷🦂🦟";
   const animal = [...animals];
-  return `Anonymous ${animal[Math.floor(Math.random() * animal.length)]}`;
+  return `Anonymous ${animal[Math.floor(seedrandom(seed)() * animal.length)]}`;
 }
 
 function getGravatarUrl(email) {
@@ -171,12 +188,14 @@ io.on("connection", socket => {
       .verifyIdToken(handshakeToken)
       .then(user => {
         if (user.email) socket.avatar = getGravatarUrl(user.email);
-        socket.displayName = user.name ? user.name : generateUsername();
         socket.uid = user.uid;
+        socket.displayName = user.name
+          ? user.name
+          : generateUsername(socket.uid);
       })
       .catch(console.error);
   } else {
-    socket.displayName = generateUsername();
+    socket.displayName = generateUsername(socket.handshake.address);
   }
 
   socket.on("disconnect", () => {
@@ -197,7 +216,7 @@ io.on("connection", socket => {
         if (user.name) socket.displayName = user.name;
         socket.uid = user.uid;
         for (const r in socket.rooms) {
-          if (socket.rooms.hasOwnProperty(r)) {
+          if (Object.prototype.hasOwnProperty.call(socket.rooms, r)) {
             const room = socket.rooms[r];
             if (rooms[room])
               io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
@@ -219,6 +238,10 @@ io.on("connection", socket => {
     if (!rooms[room]) rooms[room] = new Room();
     socket.join(room);
     setTimeout(() => {
+      io.to(room).emit(
+        "message",
+        new Message("join", socket.displayName, socket.avatar)
+      );
       io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
       if (rooms[room] && rooms[room].queue)
         socket.emit("updateQueue", rooms[room].queue);
@@ -229,17 +252,26 @@ io.on("connection", socket => {
   socket.on("leaveRoom", room => {
     if (!room || !rooms[room]) return;
     socket.leave(room);
+    io.to(room).emit(
+      "message",
+      new Message("leave", socket.displayName, socket.avatar)
+    );
     io.to(room).emit("roomUsersUpdate", getRoomUsers(room));
     updateUsersOnline(room);
   });
 
   socket.on("disconnecting", () => {
     for (const room in socket.rooms) {
-      if (socket.rooms.hasOwnProperty(room)) {
+      if (Object.prototype.hasOwnProperty.call(socket.rooms, room)) {
         const room2 = socket.rooms[room];
         setTimeout(() => {
-          if (rooms[room2])
+          if (rooms[room2]) {
+            io.to(room).emit(
+              "message",
+              new Message("leave", socket.displayName, socket.avatar)
+            );
             io.to(room2).emit("roomUsersUpdate", getRoomUsers(room2));
+          }
         }, 0);
       }
     }
@@ -251,6 +283,32 @@ io.on("connection", socket => {
     playerStatus.eventTime = new Date().getTime();
     rooms[room].playerStatus = playerStatus;
     socket.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
+    switch (playerStatus.status) {
+      case "pause":
+        io.to(room).emit(
+          "message",
+          new Message(
+            "pause",
+            socket.displayName,
+            socket.avatar,
+            playerStatus.currentTime
+          )
+        );
+        break;
+      case "play":
+        io.to(room).emit(
+          "message",
+          new Message(
+            "play",
+            socket.displayName,
+            socket.avatar,
+            playerStatus.currentTime
+          )
+        );
+        break;
+      default:
+        break;
+    }
   });
 
   socket.on("addVideo", (room, videoObj, callback) => {
@@ -280,10 +338,14 @@ io.on("connection", socket => {
     callback();
 
     if (rooms[room].queue.length === 1) {
-      rooms[room].playerStatus = new PlayerStatus("play");
+      rooms[room].playerStatus = new PlayerStatus();
       io.to(room).emit("playerStatusUpdate", rooms[room].playerStatus);
     }
 
+    io.to(room).emit(
+      "message",
+      new Message("add", socket.displayName, socket.avatar, videoObj.title)
+    );
     io.to(room).emit("updateQueue", rooms[room].queue);
   });
 
@@ -292,6 +354,15 @@ io.on("connection", socket => {
     rooms[room].queue.forEach((video, index) => {
       if (video.uid === uid) {
         rooms[room].queue.splice(index, 1);
+        io.to(room).emit(
+          "message",
+          new Message(
+            "remove",
+            socket.displayName,
+            socket.avatar,
+            "#" + (index + 1) + " " + video.title
+          )
+        );
       }
     });
     io.to(room).emit("updateQueue", rooms[room].queue);
@@ -375,6 +446,16 @@ io.on("connection", socket => {
   socket.on("getOnlineUsers", callback => {
     if (!callback) return false;
     return callback(io.engine.clientsCount);
+  });
+
+  socket.on("message", (room, message) => {
+    if (!room || !rooms[room]) return;
+    let msg = message.substring(0, 500);
+    if (msg.length < 1) return;
+    io.to(room).emit(
+      "message",
+      new Message("message", socket.displayName, socket.avatar, msg)
+    );
   });
 });
 

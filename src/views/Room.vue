@@ -173,33 +173,104 @@
       >
         <v-card>
           <v-toolbar dark color="primary">
-            <v-toolbar-title>Users</v-toolbar-title>
+            <v-toolbar-title>Chat</v-toolbar-title>
           </v-toolbar>
-          <v-card-text>
-            <div class="text-center" v-if="!socket.connected">
-              <v-progress-circular
-                color="primary"
-                indeterminate
-              ></v-progress-circular>
-            </div>
-            <div
-              v-else-if="users && users.length > 0"
-              class="user-list"
-              @wheel="scrollUserList"
-            >
-              <v-chip
-                v-for="user in users"
-                :key="user.displayName"
-                :class="user.isMe ? 'primary white--text' : ''"
-              >
-                <v-avatar v-if="user.avatar" left>
-                  <img :src="user.avatar" alt="Avatar" />
-                </v-avatar>
-                {{ user.displayName }}
-              </v-chip>
-            </div>
-            <div v-else class="text-center">
-              <p class="subheading">No users connected</p>
+          <v-card-text :style="'height: ' + videoPlayerHight">
+            <div class="chat">
+              <div class="header">
+                <div class="text-center" v-if="!socket.connected">
+                  <v-progress-circular
+                    color="primary"
+                    indeterminate
+                  ></v-progress-circular>
+                </div>
+                <div
+                  v-else-if="users && users.length > 0"
+                  class="user-list"
+                  @wheel="scrollUserList"
+                >
+                  <v-chip
+                    v-for="user in users"
+                    :key="user.displayName"
+                    :class="user.isMe ? 'primary white--text' : ''"
+                  >
+                    <v-avatar v-if="user.avatar" left>
+                      <img :src="user.avatar" alt="Avatar" />
+                    </v-avatar>
+                    {{ user.displayName }}
+                  </v-chip>
+                </div>
+                <div v-else class="text-center">
+                  <p class="subheading">No users connected</p>
+                </div>
+                <v-divider class="divider-margin"></v-divider>
+              </div>
+              <div class="content chat-wrapper">
+                <div v-for="(message, index) in messages" :key="index">
+                  <span class="timestamp">{{
+                    convertTimestamp(message.timestamp)
+                  }}</span>
+                  <div v-if="message.type === 'join'" class="text-center">
+                    <v-icon class="green--text">arrow_forward</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                  </div>
+                  <div v-else-if="message.type === 'leave'" class="text-center">
+                    <v-icon class="red--text">arrow_back</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                  </div>
+                  <div v-else-if="message.type === 'add'" class="text-center">
+                    <v-icon>playlist_add</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                    added
+                    <span class="font-weight-bold">{{ message.message }}</span>
+                  </div>
+                  <div
+                    v-else-if="message.type === 'remove'"
+                    class="text-center"
+                  >
+                    <v-icon class="red--text">remove</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                    removed
+                    <span class="font-weight-bold">{{ message.message }}</span>
+                  </div>
+                  <div v-else-if="message.type === 'pause'" class="text-center">
+                    <v-icon>pause</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                    paused at
+                    <span class="font-weight-bold">{{
+                      convertSeconds(Math.floor(message.message))
+                    }}</span>
+                  </div>
+                  <div v-else-if="message.type === 'play'" class="text-center">
+                    <v-icon>play_arrow</v-icon>
+                    <span class="font-weight-bold">{{ message.user }}</span>
+                    played at
+                    <span class="font-weight-bold">{{
+                      convertSeconds(Math.floor(message.message))
+                    }}</span>
+                  </div>
+                  <div
+                    v-else-if="message.type === 'message'"
+                    class="chat-bubble"
+                  >
+                    <span class="font-weight-bold">{{ message.user }}</span
+                    >: {{ message.message }}
+                  </div>
+                </div>
+              </div>
+              <div class="footer">
+                <v-form @submit.prevent="sendMessage">
+                  <v-text-field
+                    v-model="chatInput"
+                    append-icon="send"
+                    :rules="[rules.chat]"
+                    label="Write a message..."
+                    counter
+                    @click:append="sendMessage"
+                    maxlength="500"
+                  ></v-text-field>
+                </v-form>
+              </div>
             </div>
           </v-card-text>
         </v-card>
@@ -473,6 +544,15 @@ function convertSeconds(seconds) {
   }
   return time;
 }
+function pad(val) {
+  return val < 10 ? "0" + val : val;
+}
+
+function convertTimestamp(timestamp) {
+  var h = new Date(timestamp).getHours();
+  var m = new Date(timestamp).getMinutes();
+  return pad(h) + ":" + pad(m);
+}
 
 export default {
   components: {
@@ -515,14 +595,19 @@ export default {
       playerStatus: { status: "play" },
       rules: {
         required: value => !!value || "Required.",
-        title: value => 1 < value.length < 65 || "1-64 Characters"
+        title: value => 1 < value.length <= 64 || "1-64 Characters",
+        chat: value => 1 < value.length <= 500 || "1-500 Characters"
       },
       videoTitle: "",
       showAlert: false,
       nextPageToken: "",
       convertSeconds,
       loadNextVisible: false,
-      showSearchLoading: false
+      showSearchLoading: false,
+      videoPlayerHight: "",
+      chatInput: "",
+      messages: [],
+      convertTimestamp
     };
   },
   computed: {
@@ -568,14 +653,6 @@ export default {
         .catch(e => this.alertBox.send("error", e, 10000));
       return;
     },
-    toggleTheatre() {
-      this.theatre = !this.theatre;
-      if (this.theatre) {
-        setTimeout(() => {
-          this.$vuetify.goTo(this.$refs.player);
-        }, 300);
-      }
-    },
     scrollUserList(e) {
       if (e.type != "wheel") {
         return;
@@ -618,6 +695,8 @@ export default {
     },
     playerReady() {
       let oldTime = 0.0;
+
+      this.videoPlayerHight = this.$refs.player.clientHeight + "px";
 
       setTimeout(() => {
         if (this.socket && this.socket.connected)
@@ -755,6 +834,13 @@ export default {
                 this.playerData.videoId = "null";
                 this.closeFullscreen();
               }
+            });
+            this.socket.on("message", message => {
+              if (message) this.messages.push(message);
+              let chat = document.querySelector(".chat-wrapper");
+              setTimeout(() => {
+                chat.scrollTop = chat.scrollHeight;
+              }, 250);
             });
           }
         }, 0);
@@ -1034,6 +1120,21 @@ export default {
         this.searchVideo(null, this.nextPageToken);
       }
       this.loadNextVisible = isVisible;
+    },
+    sendMessage() {
+      if (this.socket && this.socket.connected) {
+        let msg = this.chatInput.substring(0, 500);
+        if (msg.length < 1) return;
+        this.socket.emit("message", this.roomID, msg);
+        this.chatInput = "";
+      }
+    },
+    toggleTheatre() {
+      this.theatre = !this.theatre;
+      this.videoPlayerHight = this.$refs.player.clientHeight + "px";
+      setTimeout(() => {
+        this.videoPlayerHight = this.$refs.player.clientHeight + "px";
+      }, 500);
     }
   },
   beforeRouteLeave(to, from, next) {
@@ -1082,6 +1183,9 @@ export default {
       });
     fb.rooms.doc(this.roomID).onSnapshot(documentSnapshot => {
       this.roomData = documentSnapshot.data();
+    });
+    window.addEventListener("resize", () => {
+      this.videoPlayerHight = this.$refs.player.clientHeight + "px";
     });
   }
 };

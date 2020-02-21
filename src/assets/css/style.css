@@ -184,3 +184,34 @@
 .cookieAlert button {
   margin-right: .5em;
 }
+
+.chat {
+  height: 100%;
+  display: flex;
+  flex-flow: column;
+}
+
+
+.chat .header {
+  flex: 0 1 auto;
+}
+
+.chat .chat-wrapper {
+  flex: 1 1 auto;
+  overflow: auto;
+}
+
+.chat .footer {
+  flex: 0 1 40px;
+}
+
+.timestamp {
+  position: relative;
+  float: right;
+  opacity: 0%;
+  transition: .3s;
+}
+
+.chat-wrapper:hover .timestamp {
+  opacity: 100;
+}
