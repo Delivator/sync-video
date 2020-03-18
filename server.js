@@ -81,7 +81,8 @@ function generateUsername(seed = Math.random()) {
   const animals =
     "🐵🐒🦍🐶🐕🐩🐺🦊🦝🐱🐈🦁🐯🐅🐆🐴🐎🦄🦓🦌🐮🐂🐃🐄🐷🐖🐗🐽🐏🐑🐐🐪🐫🦙🦒🐘🦏🦛🐭🐁🐀🐹🐰🐇🦔🦇🐻🐨🐼🦘🦡🦃🐔🐓🐣🐤🐥🐦🐧🕊🦅🦆🦢🦉🦚🦜🐸🐊🐢🦎🐍🐲🐉🦕🦖🐳🐋🐬🐟🐠🐡🦈🐙🐚🦀🦞🦐🦑🐌🦋🐛🐜🐝🐞🦗🕷🦂🦟";
   const animal = [...animals];
-  return `Anonymous ${animal[Math.floor(seedrandom(seed)() * animal.length)]}`;
+  let rng = seedrandom(seed);
+  return `Anonymous ${animal[Math.floor(rng() * animal.length)]}`;
 }
 
 function getGravatarUrl(email) {
@@ -191,7 +192,7 @@ io.on("connection", socket => {
         socket.uid = user.uid;
         socket.displayName = user.name
           ? user.name
-          : generateUsername(socket.uid);
+          : generateUsername(socket.handshake.address);
       })
       .catch(console.error);
   } else {
@@ -271,6 +272,7 @@ io.on("connection", socket => {
               new Message("leave", socket.displayName, socket.avatar)
             );
             io.to(room2).emit("roomUsersUpdate", getRoomUsers(room2));
+            updateUsersOnline(room2);
           }
         }, 0);
       }

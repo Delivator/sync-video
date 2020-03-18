@@ -32,7 +32,6 @@
 }
 
 .user-list {
-  display: flex;
   overflow-x: auto;
   overflow-y: hidden;
   white-space: nowrap;
@@ -43,41 +42,41 @@
   margin-bottom: .3rem;
 }
 
-.user-list::-webkit-scrollbar {
+.user-list::-webkit-scrollbar, .chat-wrapper::-webkit-scrollbar {
   width: 5px;
   height: 5px;
 }
 
-.user-list::-webkit-scrollbar-button {
+.user-list::-webkit-scrollbar-button, .chat-wrapper::-webkit-scrollbar-button {
   width: 0px;
   height: 0px;
 }
 
-.user-list::-webkit-scrollbar-thumb {
+.user-list::-webkit-scrollbar-thumb, .chat-wrapper::-webkit-scrollbar-thumb {
   background: #e1e1e1;
   border: 0px none #ffffff;
   border-radius: 50px;
 }
 
-.user-list::-webkit-scrollbar-thumb:hover {
+.user-list::-webkit-scrollbar-thumb:hover, .chat-wrapper::-webkit-scrollbar-thumb:hover {
   background: #ffffff;
 }
 
-.user-list::-webkit-scrollbar-thumb:active {
+.user-list::-webkit-scrollbar-thumb:active, .chat-wrapper::-webkit-scrollbar-thumb:active {
   background: #303030;
 }
 
-.user-list::-webkit-scrollbar-track {
+.user-list::-webkit-scrollbar-track, .chat-wrapper::-webkit-scrollbar-track {
   background: #666666;
   border: 0px none #ffffff;
   border-radius: 50px;
 }
 
-.user-list::-webkit-scrollbar-track:hover {
+.user-list::-webkit-scrollbar-track:hover, .chat-wrapper::-webkit-scrollbar-track:hover {
   background: #666666;
 }
 
-.user-list::-webkit-scrollbar-corner {
+.user-list::-webkit-scrollbar-corner, .chat-wrapper::-webkit-scrollbar-corner {
   background: transparent;
 }
 
@@ -210,6 +209,7 @@
   float: right;
   opacity: 0%;
   transition: .3s;
+  right: .3em;
 }
 
 .chat-wrapper:hover .timestamp {

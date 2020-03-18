@@ -207,7 +207,7 @@
               </div>
               <div class="content chat-wrapper">
                 <div v-for="(message, index) in messages" :key="index">
-                  <span class="timestamp">{{
+                  <span class="timestamp no-select">{{
                     convertTimestamp(message.timestamp)
                   }}</span>
                   <div v-if="message.type === 'join'" class="text-center">
@@ -765,6 +765,7 @@ export default {
               if (!this.queue[0] || this.queue[0].videoSource !== "youtube")
                 return false;
               if (playerStatus.status === "pause") {
+                console.log("playerStatus pause");
                 this.youTubePlayer
                   .getPlayerState()
                   .then(state => {
@@ -773,11 +774,11 @@ export default {
                     if (state !== 2) {
                       this.preventPlayerEvents = true;
                       this.youTubePlayer.pauseVideo();
+                      this.preventYouTubeSeekEvent = true;
+                      this.youTubePlayer.seekTo(playerStatus.currentTime);
                     }
                   })
                   .catch(console.error);
-                this.preventYouTubeSeekEvent = true;
-                this.youTubePlayer.seekTo(playerStatus.currentTime);
               } else if (playerStatus.status === "play") {
                 this.youTubePlayer
                   .getCurrentTime()
@@ -889,6 +890,7 @@ export default {
       }
     },
     onEnded() {
+      console.log("YouTube onend");
       this.preventYouTubeSeekEvent = true;
       this.youTubePlayer.seekTo(0.0);
 
