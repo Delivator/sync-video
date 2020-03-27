@@ -1,4 +1,7 @@
-## [v0.3.5](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.6](https://github.com/Delivator/sync-video/commits/master)
+- *ALPHA* Added support for direct videos (.mp4 links for example)
+  
+## [v0.3.5](https://github.com/Delivator/sync-video/commit/0b6f189e8f05fc71a9d8727152dc4fcd07240e44)
 - Minor fixes
 
 ## [v0.3.4](https://github.com/Delivator/sync-video/commit/6a8d3732dc9462b1eea54dcbea368e9445ca794b)

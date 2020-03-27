@@ -33,9 +33,13 @@ admin.initializeApp({
   databaseURL: firebaseConfig.databaseURL
 });
 
+app.use(history());
+app.use(express.static("./dist"));
+
 const db = admin.firestore();
 const rooms_collection = db.collection("rooms");
 
+// Global rooms collection
 let rooms = {};
 
 class PlayerStatus {
@@ -73,9 +77,6 @@ class Message {
     this.timestamp = timestamp;
   }
 }
-
-app.use(history());
-app.use(express.static("./dist"));
 
 function generateUsername(seed = Math.random()) {
   const animals =
@@ -174,7 +175,7 @@ app.get("*", (req, res) => {
   if (!fs.existsSync("./dist")) {
     res.writeHead(404, { "Content-Type": "text/html" });
     res.end(
-      "404: Not found<br>If your the host, make sure you ran <strong>npm run build</strong> before starting the server."
+      "404: Not found<br>If you're the host, make sure you execute <strong>npm run build</strong> before starting the server."
     );
   } else {
     res.status(404).send("404: Not found");
@@ -196,7 +197,7 @@ io.on("connection", socket => {
       })
       .catch(console.error);
   } else {
-    socket.displayName = generateUsername(socket.handshake.address);
+    socket.displayName = generateUsername(socket.handshake.address); // if not working, try socket.handshake.headers["x-forwarded-for"]
   }
 
   socket.on("disconnect", () => {
@@ -313,30 +314,37 @@ io.on("connection", socket => {
     }
   });
 
-  socket.on("addVideo", (room, videoObj, callback) => {
-    if (!room || !videoObj || !videoObj.videoId) return;
+  socket.on("addVideo", (room, media, callback) => {
+    if (!room || !media) return;
     if (!rooms[room]) rooms[room] = new Room();
     // max queue size 50 entries
     if (rooms[room].queue.length > 49)
       return callback("Max queue length is 50");
 
-    if (!videoObj.title) videoObj.title = "Video";
+    if (!media.title) media.title = "Media";
     // max title, source, description length
-    videoObj.title = String(videoObj.title).substring(0, 100);
-    videoObj.source = String(videoObj.source).substring(0, 100);
-    videoObj.description = String(videoObj.description).substring(0, 250);
-    // max video id length 11 characters
-    videoObj.videoId = String(videoObj.videoId).substring(0, 11);
-    videoObj.duration =
-      isNaN(videoObj.duration) || videoObj.duration < 0
-        ? 0.0
-        : videoObj.duration;
+    media.title = String(media.title).substring(0, 100);
+    media.channel = String(media.channel).substring(0, 100);
+    media.description = String(media.description).substring(0, 250);
+    media.url = String(media.url);
+
+    switch (media.source) {
+      case "youtube":
+        break;
+      case "direct":
+        break;
+      case "extension":
+        break;
+      default:
+        return;
+    }
+
+    media.duration =
+      isNaN(media.duration) || media.duration < 0 ? 0.0 : media.duration;
     // create a unique id for each entry
-    videoObj.uid = MD5(
-      videoObj.videoId + new Date().getTime().toString()
-    ).toString();
+    media.uid = MD5(media.url + new Date().getTime().toString()).toString();
     // push video object in array and send callback
-    rooms[room].queue.push(videoObj);
+    rooms[room].queue.push(media);
     callback();
 
     if (rooms[room].queue.length === 1) {
@@ -346,7 +354,7 @@ io.on("connection", socket => {
 
     io.to(room).emit(
       "message",
-      new Message("add", socket.displayName, socket.avatar, videoObj.title)
+      new Message("add", socket.displayName, socket.avatar, media.title)
     );
     io.to(room).emit("updateQueue", rooms[room].queue);
   });

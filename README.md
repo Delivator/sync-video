@@ -2,7 +2,7 @@
 Sync video is a app for synchronizing videos online.
 
 # Screenshots
-![homepage screenshot](https://i.imgur.com/2784NTL.png)
+![homepage screenshot](https://i.imgur.com/KHEAAcP.png)
 > Homepage
 
 # Setup
@@ -12,7 +12,7 @@ Sync video is a app for synchronizing videos online.
 
 ## Project setup
 1. Clone this repository to your machine with `git clone https://github.com/Delivator/sync-video.git` or download and unpack the repo from [here](https://github.com/Delivator/sync-video/archive/master.zip)
-2. Navigate to the new created folder with `cd sync-video`
+2. Navigate to the newly created folder with `cd sync-video`
 3. Install dependencies with `npm install`
 4. Create a project in the [firebase console](https://console.firebase.google.com/) and copy the firebase web config ([Getting started with firebase web](https://firebase.google.com/docs/web/setup))
 5. Copy the example settings.json file from `src/settings_example.json` to `src/settings.json` and fill it with your information

@@ -215,3 +215,8 @@
 .chat-wrapper:hover .timestamp {
   opacity: 100;
 }
+
+.player {
+  height: 100%;
+  width: 100%;
+}
