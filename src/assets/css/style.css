@@ -220,3 +220,7 @@
   height: 100%;
   width: 100%;
 }
+
+video:focus {
+  outline: 0;
+}

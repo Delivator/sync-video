@@ -177,6 +177,7 @@
                 @playing="playerPlaying"
                 @seeked="playerSeeked"
                 @seeking="playerSeeking"
+                @ended="playerEnded"
               ></video>
             </v-responsive>
           </v-card-text>
@@ -531,6 +532,7 @@ import settings from "../settings.json";
 import draggable from "vuedraggable";
 import * as iso8601duration from "iso8601-duration";
 import * as fb from "../fb";
+import * as Hls from "hls.js";
 
 let searchTimeout = null;
 
@@ -565,15 +567,25 @@ function convertTimestamp(timestamp) {
   return pad(h) + ":" + pad(m);
 }
 
+let testPlayer = document.createElement("video");
+
 function testDirectSource(url) {
   return new Promise((resolve, reject) => {
     if (!url || url.length < 1) return reject(false);
-    let videoElement = document.createElement("video");
-    videoElement.addEventListener("loadeddata", () => {
-      resolve(Math.floor(videoElement.duration));
-      return document.removeChild(videoElement);
+    testPlayer.src = url;
+    if (Hls.isSupported()) {
+      console.log("Hls supported");
+      let hls = new Hls();
+      hls.loadSource(url);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // console.log(hls)
+      });
+    }
+    testPlayer.addEventListener("loadeddata", () => {
+      resolve(Math.floor(testPlayer.duration));
+      testPlayer.src = "";
+      return document.removeChild(testPlayer);
     });
-    videoElement.src = url;
   });
 }
 
@@ -607,7 +619,6 @@ export default {
       theatre: false,
       users: [],
       preventPlayerEvents: false,
-      preventYouTubeSeekEvent: false,
       firstPlayerEvent: true,
       youtubeSearch: "",
       queue: [],
@@ -729,7 +740,6 @@ export default {
     },
     youtubeReady() {
       console.log("youtube player ready");
-
       let oldTime = 0.0;
 
       this.videoPlayerHight = this.$refs.player.clientHeight + "px";
@@ -737,7 +747,12 @@ export default {
       setTimeout(() => {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
-      }, 1500);
+        setTimeout(() => {
+          this.firstPlayerEvent = false;
+          this.preventPlayerEvents = false;
+          this.disableSeekEvent = false;
+        }, 500);
+      }, 750);
 
       // Custom seek "event" because the youtube embed player
       // doesn't have a "seeked" event
@@ -814,7 +829,7 @@ export default {
                         this.preventPlayerEvents = true;
                         this.youTubePlayer.pauseVideo();
                       }
-                      this.preventYouTubeSeekEvent = true;
+                      this.disableSeekEvent = true;
                       this.youTubePlayer.seekTo(playerStatus.currentTime);
                     })
                     .catch(console.error);
@@ -828,7 +843,7 @@ export default {
                         currentTime < newTime - 0.5 ||
                         currentTime > newTime + 0.5
                       ) {
-                        this.preventYouTubeSeekEvent = true;
+                        this.disableSeekEvent = true;
                         this.youTubePlayer.seekTo(playerStatus.currentTime);
 
                         this.youTubePlayer
@@ -888,20 +903,22 @@ export default {
               }
             });
             this.socket.on("updateQueue", queue => {
+              let oldSource = this.queue.length > 0 ? this.queue[0].source : "";
               if (queue) this.queue = queue;
               if (queue && queue.length > 0) {
+                if (oldSource && oldSource !== queue[0].source)
+                  this.resetPlayers();
                 if (queue[0].source === "youtube") {
                   this.playerData.videoSource = queue[0].source || "";
                   this.playerData.videoId =
                     this.$youtube.getIdFromUrl(queue[0].url) || "null";
                 } else if (queue[0].source === "direct") {
-                  this.directPlayer.src = queue[0].url;
+                  if (this.directPlayer.src !== queue[0].url)
+                    this.directPlayer.src = queue[0].url;
                 }
               } else {
                 // when the queue is empty
-                this.playerData.videoSource = "";
-                this.playerData.videoId = "null";
-                this.closeFullscreen();
+                this.resetPlayers();
               }
             });
             this.socket.on("message", message => {
@@ -916,14 +933,7 @@ export default {
       }
     },
     youtubePlaying() {
-      if (this.queue.length < 1) return;
-
-      if (this.firstPlayerEvent && this.socket && this.socket.connected) {
-        this.firstPlayerEvent = false;
-        this.socket.emit("getPlayerStatus", this.roomID);
-        return;
-      }
-
+      if (this.queue.length < 1 || this.firstPlayerEvent) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
 
       this.playerStatus.status = "play";
@@ -937,14 +947,7 @@ export default {
       }
     },
     youtubePaused() {
-      if (this.queue.length < 1) return;
-
-      if (this.firstPlayerEvent && this.socket && this.socket.connected) {
-        this.firstPlayerEvent = false;
-        this.socket.emit("getPlayerStatus", this.roomID);
-        return;
-      }
-
+      if (this.queue.length < 1 || this.firstPlayerEvent) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
 
       this.playerStatus.status = "pause";
@@ -958,18 +961,7 @@ export default {
       }
     },
     youtubeEnded() {
-      console.log("YouTube onend");
-      this.preventYouTubeSeekEvent = true;
-      this.youTubePlayer.seekTo(0.0);
-
-      if (this.queue.length > 0) {
-        this.preventPlayerEvents = true;
-        if (this.socket && this.socket.connected)
-          this.socket.emit("skipVideo", this.roomID);
-      }
-      if (this.queue.length <= 1) {
-        this.closeFullscreen();
-      }
+      this.resetPlayers();
     },
     youtubeBuffering() {
       console.log("youtube player buffering");
@@ -1095,8 +1087,7 @@ export default {
       if (e) console.log("youtubeError", e);
     },
     onSeek() {
-      if (this.preventYouTubeSeekEvent)
-        return (this.preventYouTubeSeekEvent = false);
+      if (this.disableSeekEvent) return (this.disableSeekEvent = false);
       if (!this.youTubePlayer || !this.socket || !this.socket.connected) return;
       this.youTubePlayer.getCurrentTime().then(time => {
         this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
@@ -1111,6 +1102,29 @@ export default {
       if (searchTimeout !== null) clearTimeout(searchTimeout);
 
       searchTimeout = setTimeout(() => {
+        this.showSearchLoading = true;
+        if (this.socket && this.socket.connected)
+          this.socket.emit("getYtdInfo", this.youtubeSearch, data => {
+            if (!data) return;
+            let items = [
+              {
+                media_source: "direct",
+                url: data.url,
+                title: data.title,
+                channel: data.uploader,
+                channel_url: this.youtubeSearch,
+                thumbnail: data.thumbnail,
+                youtube_id: "",
+                duration: data._duration_raw,
+                description: data.title,
+                source: "direct"
+              }
+            ];
+            this.showSearchResults = true;
+            this.showSearchLoading = false;
+            return (this.searchResults = items.concat(this.searchResults));
+          });
+
         testDirectSource(this.youtubeSearch).then(duration => {
           console.log(duration);
           let items = [
@@ -1128,7 +1142,8 @@ export default {
             }
           ];
           this.showSearchResults = true;
-          return (this.searchResults = this.searchResults.concat(items));
+          this.showSearchLoading = false;
+          return (this.searchResults = items.concat(this.searchResults));
         });
         let url = new URL("https://www.googleapis.com/youtube/v3/search");
         let params = {
@@ -1142,7 +1157,6 @@ export default {
         Object.keys(params).forEach(key =>
           url.searchParams.append(key, params[key])
         );
-        this.showSearchLoading = true;
         fetch(url)
           .then(response => {
             if (response.status !== 200) {
@@ -1253,14 +1267,10 @@ export default {
       }, 500);
     },
     playerPaused() {
-      if (this.queue.length < 1) return;
+      if (this.queue.length < 1 || this.firstPlayerEvent) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       let currentTime = this.directPlayer.currentTime;
       console.log("playerPaused", currentTime);
-      this.disableSeekEvent = true;
-      setTimeout(() => {
-        this.disableSeekEvent = false;
-      }, 100);
 
       this.playerStatus.status = "pause";
       if (this.roomID && this.socket) {
@@ -1271,7 +1281,7 @@ export default {
       }
     },
     playerPlaying() {
-      if (this.queue.length < 1) return;
+      if (this.queue.length < 1 || this.firstPlayerEvent) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
       let currentTime = this.directPlayer.currentTime;
       console.log("playerPlaying", currentTime);
@@ -1285,22 +1295,52 @@ export default {
       }
     },
     playerSeeked() {
-      if (this.queue.length < 1) return;
+      if (this.queue.length < 1 || this.firstPlayerEvent) return;
       if (this.disableSeekEvent) return (this.disableSeekEvent = false);
       // if (false) this.preventPlayerEvents = true;
       let currentTime = this.directPlayer.currentTime;
       console.log("playerSeeked", currentTime);
 
-      this.playerStatus.status = "pause";
-      if (this.roomID && this.socket) {
-        this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
-          status: "pause",
-          currentTime
-        });
-      }
+      setTimeout(() => {
+        if (this.directPlayer.paused) {
+          this.playerStatus.status = "pause";
+          if (this.roomID && this.socket) {
+            this.socket.emit("sendPlayerStatusUpdate", this.roomID, {
+              status: "pause",
+              currentTime
+            });
+          }
+        }
+      }, 10);
     },
     playerSeeking() {
       void 0;
+    },
+    playerEnded() {
+      this.resetPlayers();
+    },
+    resetPlayers() {
+      if (this.queue.length <= 1) {
+        this.closeFullscreen();
+      }
+
+      this.playerData.videoSource = "";
+
+      this.preventPlayerEvents = true;
+      this.youTubePlayer.pauseVideo();
+      this.disableSeekEvent = true;
+      this.youTubePlayer.seekTo(0.0);
+      this.playerData.videoId = "null";
+      this.preventPlayerEvents = true;
+      this.directPlayer.pause();
+      this.disableSeekEvent = true;
+      this.directPlayer.currentTime = 0.0;
+      this.directPlayer.src = "";
+
+      if (this.queue.length > 0) {
+        if (this.socket && this.socket.connected)
+          this.socket.emit("skipVideo", this.roomID);
+      }
     }
   },
   beforeRouteLeave(to, from, next) {

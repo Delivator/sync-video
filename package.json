@@ -1,6 +1,6 @@
 {
   "name": "sync-video",
-  "version": "0.3.8",
+  "version": "0.3.9",
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
@@ -14,6 +14,7 @@
     "express": "^4.17.1",
     "firebase": "^7.11.0",
     "firebase-admin": "^8.10.0",
+    "hls.js": "^0.13.2",
     "iso8601-duration": "^1.2.0",
     "mobile-device-detect": "^0.3.3",
     "seedrandom": "^3.0.5",
@@ -24,7 +25,8 @@
     "vue-router": "^3.1.6",
     "vue-youtube": "^1.4.0",
     "vuedraggable": "^2.23.2",
-    "vuetify": "^2.2.18"
+    "vuetify": "^2.2.18",
+    "youtube-dl": "^3.0.2"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^4.2.3",

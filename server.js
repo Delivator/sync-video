@@ -10,6 +10,7 @@ const admin = require("firebase-admin");
 const { MD5 } = require("crypto-js");
 const firebaseConfig = require("./src/firebaseConfig");
 const seedrandom = require("seedrandom");
+const youtubedl = require("youtube-dl");
 
 // Check for settings files
 if (!fs.existsSync("src/settings.json")) {
@@ -466,6 +467,13 @@ io.on("connection", socket => {
       "message",
       new Message("message", socket.displayName, socket.avatar, msg)
     );
+  });
+
+  socket.on("getYtdInfo", (url, callback) => {
+    youtubedl.getInfo(url, (err, info) => {
+      if (err) return callback(false);
+      if (info) return callback(info);
+    });
   });
 });
 

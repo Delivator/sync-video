@@ -1,4 +1,8 @@
-## [v0.3.6](https://github.com/Delivator/sync-video/commits/master)
+## [v0.3.9](https://github.com/Delivator/sync-video/commits/master)
+- Added youtube-dl to search bar
+- Bugfixes
+
+## [v0.3.6](https://github.com/Delivator/sync-video/commit/a62b7bd7d87ce9ee15beaf8627fb0c08c3213d92)
 - *ALPHA* Added support for direct videos (.mp4 links for example)
   
 ## [v0.3.5](https://github.com/Delivator/sync-video/commit/0b6f189e8f05fc71a9d8727152dc4fcd07240e44)
