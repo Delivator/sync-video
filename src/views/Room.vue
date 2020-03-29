@@ -414,6 +414,7 @@
                           video.url,
                           video.title,
                           video.channel,
+                          video.channel_url,
                           video.description,
                           video.duration ? video.duration : 0.0,
                           video.thumbnail,
@@ -474,7 +475,13 @@
                         </v-list-item-title>
                         <v-list-item-subtitle>
                           <span class="text--primary">
-                            {{ parseHtml(video.channel) }}
+                            <a
+                              :href="video.channel_url"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="no-link-deko white--text"
+                              >{{ video.channel }}</a
+                            >
                           </span>
                           &mdash; {{ video.description }}
                         </v-list-item-subtitle>
@@ -578,13 +585,16 @@ function testDirectSource(url) {
       let hls = new Hls();
       hls.loadSource(url);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // console.log(hls)
+        hls.attachMedia(testPlayer);
+        testPlayer.addEventListener("loadeddata", () => {
+          resolve(Math.floor(testPlayer.duration));
+          testPlayer.src = "";
+        });
       });
     }
     testPlayer.addEventListener("loadeddata", () => {
       resolve(Math.floor(testPlayer.duration));
       testPlayer.src = "";
-      return document.removeChild(testPlayer);
     });
   });
 }
@@ -986,6 +996,7 @@ export default {
       url,
       title,
       channel = "",
+      channel_url = "",
       description = "",
       duration = 0.0,
       thumbnail = "",
@@ -1025,6 +1036,7 @@ export default {
           url: `https://www.youtube.com/watch?v=${videoId}`,
           title,
           channel,
+          channel_url,
           description,
           duration,
           thumbnail
@@ -1063,6 +1075,7 @@ export default {
           url,
           title,
           channel,
+          channel_url,
           description,
           duration,
           thumbnail
@@ -1103,48 +1116,53 @@ export default {
 
       searchTimeout = setTimeout(() => {
         this.showSearchLoading = true;
+        let videoId = this.$youtube.getIdFromUrl(this.youtubeSearch);
         if (this.socket && this.socket.connected)
-          this.socket.emit("getYtdInfo", this.youtubeSearch, data => {
-            if (!data) return;
-            let items = [
-              {
-                media_source: "direct",
-                url: data.url,
-                title: data.title,
-                channel: data.uploader,
-                channel_url: this.youtubeSearch,
-                thumbnail: data.thumbnail,
-                youtube_id: "",
-                duration: data._duration_raw,
-                description: data.title,
-                source: "direct"
-              }
-            ];
-            this.showSearchResults = true;
-            this.showSearchLoading = false;
-            return (this.searchResults = items.concat(this.searchResults));
-          });
-
-        testDirectSource(this.youtubeSearch).then(duration => {
-          console.log(duration);
-          let items = [
-            {
-              media_source: "direct",
-              url: this.youtubeSearch,
-              title: "Direct Video",
-              channel: "Direct Video",
-              channel_url: "#",
-              thumbnail: "",
-              youtube_id: "",
-              duration,
-              description: "Direct Video",
-              source: "direct"
-            }
-          ];
-          this.showSearchResults = true;
-          this.showSearchLoading = false;
-          return (this.searchResults = items.concat(this.searchResults));
-        });
+          if (!videoId) {
+            this.socket.emit("getYtdInfo", this.youtubeSearch, data => {
+              if (!data) return;
+              let formats = data.formats.filter(video => {
+                return video.protocol === "https";
+              });
+              let items = [
+                {
+                  media_source: "direct",
+                  url: formats.reverse()[0].url,
+                  title: data.title,
+                  channel: data.uploader,
+                  channel_url: this.youtubeSearch,
+                  thumbnail: data.thumbnail,
+                  youtube_id: "",
+                  duration: data._duration_raw,
+                  description: data.title,
+                  source: "direct"
+                }
+              ];
+              this.showSearchResults = true;
+              this.showSearchLoading = false;
+              return (this.searchResults = items.concat(this.searchResults));
+            });
+            testDirectSource(this.youtubeSearch).then(duration => {
+              console.log(duration);
+              let items = [
+                {
+                  media_source: "direct",
+                  url: this.youtubeSearch,
+                  title: "Direct Video",
+                  channel: "Direct Video",
+                  channel_url: "#",
+                  thumbnail: "",
+                  youtube_id: "",
+                  duration,
+                  description: "Direct Video",
+                  source: "direct"
+                }
+              ];
+              this.showSearchResults = true;
+              this.showSearchLoading = false;
+              return (this.searchResults = items.concat(this.searchResults));
+            });
+          }
         let url = new URL("https://www.googleapis.com/youtube/v3/search");
         let params = {
           key: settings.youTubeAPIKey,

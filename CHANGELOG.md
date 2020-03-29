@@ -1,4 +1,7 @@
-## [v0.3.9](https://github.com/Delivator/sync-video/commits/master)
+## [v0.4.0](https://github.com/Delivator/sync-video/commits/master)
+- Some more fixes
+
+## [v0.3.9](https://github.com/Delivator/sync-video/commit/e4272ff182863f72b5e688c60743ef541ce9d5fb)
 - Added youtube-dl to search bar
 - Bugfixes
 
