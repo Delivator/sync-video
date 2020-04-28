@@ -757,12 +757,7 @@ export default {
       setTimeout(() => {
         if (this.socket && this.socket.connected)
           this.socket.emit("getPlayerStatus", this.roomID);
-        setTimeout(() => {
-          this.firstPlayerEvent = false;
-          this.preventPlayerEvents = false;
-          this.disableSeekEvent = false;
-        }, 500);
-      }, 750);
+      }, 1250);
 
       // Custom seek "event" because the youtube embed player
       // doesn't have a "seeked" event
@@ -850,8 +845,8 @@ export default {
                       let newTime = playerStatus.currentTime;
                       if (
                         playerStatus.force ||
-                        currentTime < newTime - 0.5 ||
-                        currentTime > newTime + 0.5
+                        currentTime < newTime - 0.25 ||
+                        currentTime > newTime + 0.25
                       ) {
                         this.disableSeekEvent = true;
                         this.youTubePlayer.seekTo(playerStatus.currentTime);
@@ -943,8 +938,9 @@ export default {
       }
     },
     youtubePlaying() {
-      if (this.queue.length < 1 || this.firstPlayerEvent) return;
+      if (this.queue.length < 1) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (this.firstPlayerEvent) return (this.firstPlayerEvent = false);
 
       this.playerStatus.status = "play";
       if (this.roomID && this.socket) {
@@ -957,8 +953,9 @@ export default {
       }
     },
     youtubePaused() {
-      if (this.queue.length < 1 || this.firstPlayerEvent) return;
+      if (this.queue.length < 1) return;
       if (this.preventPlayerEvents) return (this.preventPlayerEvents = false);
+      if (this.firstPlayerEvent) return (this.firstPlayerEvent = false);
 
       this.playerStatus.status = "pause";
       if (this.roomID && this.socket) {
@@ -1030,6 +1027,7 @@ export default {
         }
       };
       console.log("addVideo", source);
+      if (videoId) source = "youtube";
       if (source === "youtube") {
         let options = {
           source: "youtube",
@@ -1054,13 +1052,17 @@ export default {
             .then(videos => {
               if (videos && videos.items && videos.items.length > 0) {
                 let video = videos.items[0];
-                title = this.parseHtml(video.snippet.title);
-                channel = video.snippet.channelTitle.substring(0, 100);
-                description = video.snippet.description.substring(0, 250);
-                duration = iso8601duration.toSeconds(
+                options.title = this.parseHtml(video.snippet.title);
+                options.channel = video.snippet.channelTitle.substring(0, 100);
+                options.channel_url = `https://www.youtube.com/channel/${video.snippet.channelId}`;
+                options.description = video.snippet.description.substring(
+                  0,
+                  250
+                );
+                options.duration = iso8601duration.toSeconds(
                   iso8601duration.parse(video.contentDetails.duration)
                 );
-                thumbnail = video.snippet.thumbnails.medium.url;
+                options.thumbnail = video.snippet.thumbnails.medium.url;
                 sendUpdate(options);
               }
             })
