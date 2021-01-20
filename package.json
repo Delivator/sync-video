@@ -19,7 +19,7 @@
     "mobile-device-detect": "^0.3.3",
     "seedrandom": "^3.0.5",
     "showdown": "^1.9.1",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "vue": "^2.6.11",
     "vue-observe-visibility": "^0.4.6",
     "vue-router": "^3.3.4",
